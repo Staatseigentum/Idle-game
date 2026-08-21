@@ -177,11 +177,14 @@ val generateIcons by tasks.registering(JavaExec::class) {
     doFirst { args = listOf(outDir.get().asFile.absolutePath) }
 }
 
-// Every native-distribution package task needs the freshly rendered icon files first. Matched
-// by name (not just "package*") so this doesn't also drag icon generation into Android's own
-// packageDebug/packageDebugResources tasks, which happen to share the "package" prefix.
-val nativeDistributionTaskName = Regex("^package(Release)?(Msi|Dmg|Deb|Rpm|Exe|Pkg|AppImage|DistributionForCurrentOS)$")
-tasks.matching { nativeDistributionTaskName.matches(it.name) }.configureEach { dependsOn(generateIcons) }
+// Every jpackage-based task needs the freshly rendered icon files first — including
+// createDistributable, which packageMsi/packageDmg/packageDeb/packageRpm each depend on and
+// which is what actually reads `iconFile`. Hooking package* by name isn't enough: Gradle doesn't
+// order same-level dependencies against each other, so createDistributable could (and on the
+// macOS runner did) run before generateIcons even though both are packageDmg's dependencies.
+tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
+    dependsOn(generateIcons)
+}
 
 compose.desktop {
     application {
