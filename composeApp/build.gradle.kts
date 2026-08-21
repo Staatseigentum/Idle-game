@@ -162,23 +162,74 @@ tasks.register<JavaExec>("renderPixelArt") {
     classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
 }
 
+val iconOutputDir = layout.buildDirectory.dir("generated/icons")
+
+/** Rasterizes `appIcon()` into icon.ico/.icns/.png — no icon asset is checked into git. */
+val generateIcons by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Renders appIcon() into icon.ico, icon.icns and icon.png for the installers."
+    val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    dependsOn(desktopMain.compileTaskProvider)
+    mainClass.set("com.embercrown.game.IconExporterKt")
+    classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
+    val outDir = iconOutputDir
+    outputs.dir(outDir)
+    doFirst { args = listOf(outDir.get().asFile.absolutePath) }
+}
+
+// Every native-distribution package task needs the freshly rendered icon files first. Matched
+// by name (not just "package*") so this doesn't also drag icon generation into Android's own
+// packageDebug/packageDebugResources tasks, which happen to share the "package" prefix.
+val nativeDistributionTaskName = Regex("^package(Release)?(Msi|Dmg|Deb|Rpm|Exe|Pkg|AppImage|DistributionForCurrentOS)$")
+tasks.matching { nativeDistributionTaskName.matches(it.name) }.configureEach { dependsOn(generateIcons) }
+
 compose.desktop {
     application {
         mainClass = "com.embercrown.game.MainKt"
 
         nativeDistributions {
+            // Each format only builds on its matching host OS, so `packageDistributionForCurrentOS`
+            // in CI naturally produces just the installer(s) for the runner it's on.
             targetFormats(
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Rpm,
             )
             packageName = "Embercrown"
             packageVersion = appVersion
+            description = "Embercrown — a pixel-art idle/incremental game"
+            vendor = "Staatseigentum"
+            copyright = "© 2026 Staatseigentum"
+
+            windows {
+                menuGroup = "Embercrown"
+                perUserInstall = true
+                shortcut = true
+                dirChooser = true
+                // Fixed so a newer MSI upgrades the existing install instead of side-installing.
+                // Never change this once released.
+                upgradeUuid = "097346D8-58E2-462A-80F3-4BC19F18451B"
+                iconFile.set(iconOutputDir.map { it.file("icon.ico") })
+            }
 
             macOS {
+                bundleID = "com.embercrown.game"
+                dockName = "Embercrown"
                 // jpackage rejects a major version of 0 on macOS, so the bundle carries 1.0.0
                 // while the app itself still reports `appVersion` through BuildInfo.
                 packageVersion = "1.0.0"
+                iconFile.set(iconOutputDir.map { it.file("icon.icns") })
+            }
+
+            linux {
+                shortcut = true
+                appCategory = "Game"
+                menuGroup = "Games"
+                // GitHub's noreply address avoids embedding a personal email in a public installer.
+                debMaintainer = "Staatseigentum <staatseigentum@users.noreply.github.com>"
+                rpmLicenseType = "Proprietary"
+                iconFile.set(iconOutputDir.map { it.file("icon.png") })
             }
         }
     }

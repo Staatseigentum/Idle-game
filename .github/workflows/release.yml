@@ -42,13 +42,31 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # rpmbuild isn't preinstalled on the ubuntu runner; jpackage shells out to it for packageRpm.
+      - name: Install rpm packaging tools
+        if: matrix.os_token == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
       # A Compose Desktop uber jar bundles the Skiko native library for the OS it is built on,
       # so each platform needs its own build; a single shared jar would fail to start elsewhere.
+      # It still ships alongside the installer below: the launcher/in-app updater fetch this jar
+      # directly rather than re-running a platform installer for every update.
       - name: Build uber jar
         run: ./gradlew :composeApp:packageUberJarForCurrentOS --no-daemon
         shell: bash
 
-      - name: Rename jar for release
+      # Native installer(s) for a fresh install: MSI on Windows, DMG on macOS, DEB+RPM on Linux.
+      - name: Build native installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.os_token }}" in
+            windows) ./gradlew :composeApp:packageMsi --no-daemon ;;
+            macos)   ./gradlew :composeApp:packageDmg --no-daemon ;;
+            linux)   ./gradlew :composeApp:packageDeb :composeApp:packageRpm --no-daemon ;;
+          esac
+
+      - name: Collect release files
         shell: bash
         run: |
           set -euo pipefail
@@ -56,12 +74,19 @@ jobs:
           if [ -z "$jar" ]; then echo "no uber jar produced"; exit 1; fi
           mkdir -p dist
           cp "$jar" "dist/Embercrown-${{ matrix.os_token }}.jar"
+
+          installers=$(find composeApp/build/compose/binaries/main -type f \( -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \))
+          if [ -z "$installers" ]; then echo "no installer produced"; exit 1; fi
+          while IFS= read -r f; do
+            ext="${f##*.}"
+            cp "$f" "dist/Embercrown-${{ matrix.os_token }}.$ext"
+          done <<< "$installers"
           ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os_token }}
-          path: dist/*.jar
+          path: dist/*
 
   android-and-launcher:
     name: Android APK + launcher
@@ -114,7 +139,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          find staged -type f \( -name '*.jar' -o -name '*.apk' \) -exec cp {} dist/ \;
+          find staged -type f \( -name '*.jar' -o -name '*.apk' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist/ \;
           ls -la dist
 
       - name: Upload to release

@@ -205,7 +205,7 @@ fun lerpColor(a: Color, b: Color, t: Double): Color {
 }
 
 /** Rasterizes the art once into a real bitmap so it can be blitted nearest-neighbor. */
-private fun PixelArt.toImageBitmap(): ImageBitmap {
+fun PixelArt.toImageBitmap(): ImageBitmap {
     val bitmap = ImageBitmap(width, height)
     val canvas = androidx.compose.ui.graphics.Canvas(bitmap)
     val paint = Paint()
