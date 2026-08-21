@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aschenkrone</string>
+    <string name="tagline">Ein Königreich, das niemals wirklich stirbt.</string>
+
+    <string name="gold_label">Gold</string>
+    <string name="per_second_label">%1$s / s</string>
+    <string name="tap_button">Klicken</string>
+
+    <string name="buildings_title">Gebäude</string>
+    <string name="ages_title">Zeitalter</string>
+    <string name="level_label">Stufe %1$d</string>
+    <string name="buy_button">Kaufen — %1$s</string>
+    <string name="locked_until_label">Freigeschaltet ab %1$s</string>
+    <string name="buy_multiplier_label">Kaufen</string>
+    <string name="progress_to_next_age">%1$s bis %2$s</string>
+
+    <string name="tab_holdings">Gebäude</string>
+    <string name="tab_reign">Reich</string>
+
+    <string name="chronicle_points_label">Chroniken</string>
+    <string name="verfall_title">Der Verfall</string>
+    <string name="verfall_description">Lass das Königreich fallen. Behalte, was der Fall dich gelehrt hat.</string>
+    <string name="verfall_button">Verfall einleiten</string>
+    <string name="verfall_reward_preview">Belohnung jetzt: %1$s Chroniken</string>
+    <string name="verfall_locked_hint">Erreiche %1$s Lebenszeit-Gold, um den Verfall einzuleiten.</string>
+    <string name="verfall_count_label">Überstandene Verfälle: %1$d</string>
+
+    <string name="academy_title">Akademie</string>
+    <string name="academy_level_label">Stufe %1$d — +%2$s%% Produktion</string>
+    <string name="academy_upgrade_button">Studieren — %1$s Chroniken</string>
+
+    <string name="reign_tab_verfall">Verfall</string>
+    <string name="reign_tab_dynasty">Dynastie</string>
+    <string name="reign_tab_academy">Akademie</string>
+    <string name="reign_tab_achievements">Erfolge</string>
+    <string name="reign_tab_rules">Regeln</string>
+    <string name="reign_tab_system">System</string>
+
+    <string name="wiedergeburt_title">Wiedergeburt</string>
+    <string name="wiedergeburt_description">Lass selbst die Chroniken verblassen. Was bleibt, wird zur Sage.</string>
+    <string name="wiedergeburt_button">Wiedergeburt einleiten</string>
+    <string name="wiedergeburt_locked_hint">Überstehe %1$d Verfälle, um die Wiedergeburt freizuschalten. (bisher %2$d)</string>
+    <string name="wiedergeburt_reward_preview">Belohnung jetzt: %1$s Sagen</string>
+    <string name="wiedergeburt_count_label">Wiedergeburten: %1$d</string>
+    <string name="legends_label">Sagen</string>
+    <string name="dynasty_path_level_label">Stufe %1$d — +%2$s%%</string>
+    <string name="dynasty_path_active_label">Aktiv</string>
+    <string name="dynasty_path_activate_button">Aktivieren</string>
+    <string name="dynasty_path_invest_button">Investieren — %1$s Sagen</string>
+    <string name="dynasty_switch_hint">Nur der Bonus des aktiven Pfades wirkt — die anderen behalten ihre Stufe, schlafen aber.</string>
+
+    <string name="dynasty_path_steel">Pfad des Stahls</string>
+    <string name="dynasty_path_steel_desc">Rohe Kraft. Jedes Gebäude produziert mehr.</string>
+    <string name="dynasty_path_magic">Pfad der Magie</string>
+    <string name="dynasty_path_magic_desc">Tieferes Studium. Die Lehren der Akademie schneiden schärfer.</string>
+    <string name="dynasty_path_cunning">Pfad der Täuschung</string>
+    <string name="dynasty_path_cunning_desc">Stille Hebelwirkung. Jeder Verfall zahlt mehr Chroniken aus.</string>
+
+    <string name="achievements_progress_label">%1$d / %2$d freigeschaltet — +%3$s%% Produktion</string>
+
+    <string name="achievement_first_gold">Erste Münze</string>
+    <string name="achievement_hundred_gold">Bescheidener Schatz</string>
+    <string name="achievement_reach_village">Wurzeln</string>
+    <string name="achievement_reach_kingdom">Eine echte Krone</string>
+    <string name="achievement_reach_embercrown">Der Thron selbst</string>
+    <string name="achievement_first_verfall">Erster Fall</string>
+    <string name="achievement_ten_verfalls">Zehn Verfälle</string>
+    <string name="achievement_academy_initiate">Akademie-Novize</string>
+    <string name="achievement_academy_master">Akademie-Meister</string>
+    <string name="achievement_hundred_levels">Hundert Hände</string>
+
+    <string name="rules_offline_progress_label">Offline-Fortschritt</string>
+    <string name="rules_offline_progress_description">Sammle weiter Gold, während das Spiel geschlossen ist (max. 8 Stunden).</string>
+
+    <string name="system_save_button">Jetzt speichern</string>
+    <string name="system_export_title">Speicherstand exportieren</string>
+    <string name="system_export_hint">Kopiere diesen Text, um deinen Fortschritt zu sichern.</string>
+    <string name="system_import_title">Speicherstand importieren</string>
+    <string name="system_import_hint">Füge hier einen zuvor exportierten Speicherstand ein.</string>
+    <string name="system_import_button">Laden</string>
+    <string name="system_import_success">Speicherstand geladen.</string>
+    <string name="system_import_error">Das sieht nicht nach einem gültigen Aschenkrone-Speicherstand aus.</string>
+    <string name="system_reset_title">Alles zurücksetzen</string>
+    <string name="system_reset_description">Löscht Gold, Gebäude, Chroniken, Akademie und Erfolge. Kann nicht rückgängig gemacht werden.</string>
+    <string name="system_reset_button">Alles zurücksetzen</string>
+    <string name="system_reset_confirm_button">Wirklich zurücksetzen? Nochmal tippen zum Bestätigen</string>
+
+    <string name="building_farm">Bauernhof</string>
+    <string name="building_fishing_hut">Fischerhütte</string>
+    <string name="building_woodcutter_camp">Holzfällerlager</string>
+    <string name="building_quarry">Steinbruch</string>
+    <string name="building_mine">Mine</string>
+    <string name="building_market_stall">Marktstand</string>
+    <string name="building_tavern">Gasthaus</string>
+    <string name="building_forge">Schmiede</string>
+    <string name="building_trading_post">Handelskontor</string>
+    <string name="building_library">Bibliothek</string>
+    <string name="building_alchemist_lab">Alchemistenlabor</string>
+    <string name="building_wizard_tower">Zauberturm</string>
+    <string name="building_temple">Tempel</string>
+    <string name="building_treasury">Schatzkammer</string>
+    <string name="building_dragon_hoard">Drachenhort</string>
+    <string name="building_celestial_observatory">Himmelsobservatorium</string>
+
+    <string name="age_camp">Zeltlager</string>
+    <string name="age_hamlet">Weiler</string>
+    <string name="age_village">Dorf</string>
+    <string name="age_market_town">Marktflecken</string>
+    <string name="age_town">Stadt</string>
+    <string name="age_free_city">Freie Stadt</string>
+    <string name="age_county">Grafschaft</string>
+    <string name="age_duchy">Herzogtum</string>
+    <string name="age_kingdom">Königreich</string>
+    <string name="age_united_kingdom">Vereintes Königreich</string>
+    <string name="age_empire">Imperium</string>
+    <string name="age_continental_realm">Kontinentalreich</string>
+    <string name="age_legendary_realm">Sagenreich</string>
+    <string name="age_realm_of_dreams">Traumreich</string>
+    <string name="age_shadow_realm">Schattenreich</string>
+    <string name="age_realm_of_stars">Sternenreich</string>
+    <string name="age_eternal_realm">Ewiges Reich</string>
+    <string name="age_embercrown">Aschenthron</string>
+
+    <string name="chronicle_camp">Das erste Feuer, seit das letzte erlosch.</string>
+    <string name="chronicle_hamlet">Eine Handvoll Zelte erinnert sich an deinen Namen.</string>
+    <string name="chronicle_village">Wieder Wurzeln, dünn und zitternd.</string>
+    <string name="chronicle_market_town">Fremde verkaufen Dinge, die du fast selbst erfunden hast.</string>
+    <string name="chronicle_town">Mauern wachsen schneller als der Zweifel, ob du sie brauchst.</string>
+    <string name="chronicle_free_city">Kein Lehnsherr außer dem in deiner eigenen Brust.</string>
+    <string name="chronicle_county">Ein Titel, wieder. Er passt wie alte Schuhe.</string>
+    <string name="chronicle_duchy">Andere Fürsten verneigen sich. Sie wissen nicht, wie oft du zuerst verneigt hast.</string>
+    <string name="chronicle_kingdom">Eine Krone, jedes Mal schwerer, jedes Mal leichter zu tragen, wenn du dich erinnerst.</string>
+    <string name="chronicle_united_kingdom">Alte Grenzen vergessen, dass sie je Grenzen waren.</string>
+    <string name="chronicle_empire">Die Karte endet, bevor dein Ehrgeiz es tut.</string>
+    <string name="chronicle_continental_realm">Horizonte sind keine Ausrede mehr.</string>
+    <string name="chronicle_legendary_realm">Barden fragen nicht mehr, ob die Geschichten wahr sind.</string>
+    <string name="chronicle_realm_of_dreams">Schlaf und Herrschaft teilen sich eine Grenze.</string>
+    <string name="chronicle_shadow_realm">Selbst der Verfall zögert hier.</string>
+    <string name="chronicle_realm_of_stars">Du zählst keine Jahre mehr, sondern Lichter.</string>
+    <string name="chronicle_eternal_realm">Ewigkeit, anprobiert wie ein Mantel, der fast passt.</string>
+    <string name="chronicle_embercrown">Der Thron bestand schon immer aus dem, was übrig blieb.</string>
+</resources>

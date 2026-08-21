@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Embercrown</string>
+    <string name="tagline">A kingdom that never truly dies.</string>
+
+    <string name="gold_label">Gold</string>
+    <string name="per_second_label">%1$s / s</string>
+    <string name="tap_button">Tap</string>
+
+    <string name="buildings_title">Holdings</string>
+    <string name="ages_title">Ages</string>
+    <string name="level_label">Lv. %1$d</string>
+    <string name="buy_button">Buy — %1$s</string>
+    <string name="locked_until_label">Unlocks at %1$s</string>
+    <string name="buy_multiplier_label">Buy</string>
+    <string name="progress_to_next_age">%1$s to %2$s</string>
+
+    <string name="tab_holdings">Holdings</string>
+    <string name="tab_reign">Reign</string>
+
+    <string name="chronicle_points_label">Chronicle Points</string>
+    <string name="verfall_title">The Blight</string>
+    <string name="verfall_description">Let the kingdom fall. Keep what the fall taught you.</string>
+    <string name="verfall_button">Embrace the Blight</string>
+    <string name="verfall_reward_preview">Reward now: %1$s Chronicle Points</string>
+    <string name="verfall_locked_hint">Reach %1$s lifetime gold to embrace the Blight.</string>
+    <string name="verfall_count_label">Falls survived: %1$d</string>
+
+    <string name="academy_title">Academy</string>
+    <string name="academy_level_label">Level %1$d — +%2$s%% production</string>
+    <string name="academy_upgrade_button">Study — %1$s CP</string>
+
+    <string name="reign_tab_verfall">Blight</string>
+    <string name="reign_tab_dynasty">Dynasty</string>
+    <string name="reign_tab_academy">Academy</string>
+    <string name="reign_tab_achievements">Achievements</string>
+    <string name="reign_tab_rules">Rules</string>
+    <string name="reign_tab_system">System</string>
+
+    <string name="wiedergeburt_title">Rebirth</string>
+    <string name="wiedergeburt_description">Let the Chronicles themselves fade. What remains becomes legend.</string>
+    <string name="wiedergeburt_button">Embrace Rebirth</string>
+    <string name="wiedergeburt_locked_hint">Survive %1$d Blights to unlock Rebirth. (%2$d so far)</string>
+    <string name="wiedergeburt_reward_preview">Reward now: %1$s Legends</string>
+    <string name="wiedergeburt_count_label">Rebirths: %1$d</string>
+    <string name="legends_label">Legends</string>
+    <string name="dynasty_path_level_label">Level %1$d — +%2$s%%</string>
+    <string name="dynasty_path_active_label">Active</string>
+    <string name="dynasty_path_activate_button">Make active</string>
+    <string name="dynasty_path_invest_button">Invest — %1$s Legends</string>
+    <string name="dynasty_switch_hint">Only the active path\'s bonus applies — the others keep their level, just asleep.</string>
+
+    <string name="dynasty_path_steel">Path of Steel</string>
+    <string name="dynasty_path_steel_desc">Raw might. Every holding produces more.</string>
+    <string name="dynasty_path_magic">Path of Magic</string>
+    <string name="dynasty_path_magic_desc">Deeper study. The Academy\'s teachings cut sharper.</string>
+    <string name="dynasty_path_cunning">Path of Cunning</string>
+    <string name="dynasty_path_cunning_desc">Quiet leverage. Every Blight pays out more Chronicle Points.</string>
+
+    <string name="achievements_progress_label">%1$d / %2$d unlocked — +%3$s%% production</string>
+
+    <string name="achievement_first_gold">First Coin</string>
+    <string name="achievement_hundred_gold">Modest Hoard</string>
+    <string name="achievement_reach_village">Roots</string>
+    <string name="achievement_reach_kingdom">A Real Crown</string>
+    <string name="achievement_reach_embercrown">The Throne Itself</string>
+    <string name="achievement_first_verfall">First Fall</string>
+    <string name="achievement_ten_verfalls">Ten Falls</string>
+    <string name="achievement_academy_initiate">Academy Initiate</string>
+    <string name="achievement_academy_master">Academy Master</string>
+    <string name="achievement_hundred_levels">A Hundred Hands</string>
+
+    <string name="rules_offline_progress_label">Offline progress</string>
+    <string name="rules_offline_progress_description">Keep earning gold while the game is closed (capped at 8 hours).</string>
+
+    <string name="system_save_button">Save now</string>
+    <string name="system_export_title">Export save</string>
+    <string name="system_export_hint">Copy this text to back up your progress.</string>
+    <string name="system_import_title">Import save</string>
+    <string name="system_import_hint">Paste a previously exported save here.</string>
+    <string name="system_import_button">Load</string>
+    <string name="system_import_success">Save loaded.</string>
+    <string name="system_import_error">That doesn\'t look like a valid Embercrown save.</string>
+    <string name="system_reset_title">Reset everything</string>
+    <string name="system_reset_description">Wipes gold, buildings, Chronicle Points, Academy and Achievements. Cannot be undone.</string>
+    <string name="system_reset_button">Reset everything</string>
+    <string name="system_reset_confirm_button">Really reset? Tap again to confirm</string>
+
+    <string name="building_farm">Farm</string>
+    <string name="building_fishing_hut">Fishing Hut</string>
+    <string name="building_woodcutter_camp">Woodcutter Camp</string>
+    <string name="building_quarry">Quarry</string>
+    <string name="building_mine">Mine</string>
+    <string name="building_market_stall">Market Stall</string>
+    <string name="building_tavern">Tavern</string>
+    <string name="building_forge">Forge</string>
+    <string name="building_trading_post">Trading Post</string>
+    <string name="building_library">Library</string>
+    <string name="building_alchemist_lab">Alchemist's Lab</string>
+    <string name="building_wizard_tower">Wizard Tower</string>
+    <string name="building_temple">Temple</string>
+    <string name="building_treasury">Treasury</string>
+    <string name="building_dragon_hoard">Dragon Hoard</string>
+    <string name="building_celestial_observatory">Celestial Observatory</string>
+
+    <string name="age_camp">Camp</string>
+    <string name="age_hamlet">Hamlet</string>
+    <string name="age_village">Village</string>
+    <string name="age_market_town">Market Town</string>
+    <string name="age_town">Town</string>
+    <string name="age_free_city">Free City</string>
+    <string name="age_county">County</string>
+    <string name="age_duchy">Duchy</string>
+    <string name="age_kingdom">Kingdom</string>
+    <string name="age_united_kingdom">United Kingdom</string>
+    <string name="age_empire">Empire</string>
+    <string name="age_continental_realm">Continental Realm</string>
+    <string name="age_legendary_realm">Legendary Realm</string>
+    <string name="age_realm_of_dreams">Realm of Dreams</string>
+    <string name="age_shadow_realm">Shadow Realm</string>
+    <string name="age_realm_of_stars">Realm of Stars</string>
+    <string name="age_eternal_realm">Eternal Realm</string>
+    <string name="age_embercrown">Embercrown</string>
+
+    <string name="chronicle_camp">The first fire since the last one went out.</string>
+    <string name="chronicle_hamlet">A handful of tents remember your name.</string>
+    <string name="chronicle_village">Roots again, thin and trembling.</string>
+    <string name="chronicle_market_town">Strangers arrive selling things you almost recall inventing.</string>
+    <string name="chronicle_town">Walls rise faster than the doubt that you\'ll need them.</string>
+    <string name="chronicle_free_city">No liege but the one inside your own chest.</string>
+    <string name="chronicle_county">A title, again. It fits the way old shoes fit.</string>
+    <string name="chronicle_duchy">Other lords bow. They don\'t know how many times you\'ve bowed first.</string>
+    <string name="chronicle_kingdom">A crown, heavier each time, lighter each time you remember how to wear it.</string>
+    <string name="chronicle_united_kingdom">Old borders forget they were ever borders.</string>
+    <string name="chronicle_empire">The map runs out before your ambition does.</string>
+    <string name="chronicle_continental_realm">Horizons stop being an excuse.</string>
+    <string name="chronicle_legendary_realm">Bards stop asking if the stories are true.</string>
+    <string name="chronicle_realm_of_dreams">Sleep and rule start to share a border.</string>
+    <string name="chronicle_shadow_realm">Even the Blight hesitates here.</string>
+    <string name="chronicle_realm_of_stars">You stop counting years and start counting lights.</string>
+    <string name="chronicle_eternal_realm">Forever, tried on like a coat that almost fits.</string>
+    <string name="chronicle_embercrown">The throne was always made of what was left over.</string>
+</resources>
