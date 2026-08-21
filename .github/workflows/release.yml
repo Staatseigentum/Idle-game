@@ -1,0 +1,125 @@
+name: Release
+
+# Publishing is driven entirely by the tag: push v1.2.3 and this builds every artifact and
+# attaches it to the matching GitHub release. The launcher and the in-app update check both
+# read that release, so a release without these assets is a release nobody can install.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach artifacts to (e.g. v0.0.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    name: Desktop (${{ matrix.os_token }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            os_token: windows
+          - runner: ubuntu-latest
+            os_token: linux
+          - runner: macos-latest
+            os_token: macos
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # A Compose Desktop uber jar bundles the Skiko native library for the OS it is built on,
+      # so each platform needs its own build; a single shared jar would fail to start elsewhere.
+      - name: Build uber jar
+        run: ./gradlew :composeApp:packageUberJarForCurrentOS --no-daemon
+        shell: bash
+
+      - name: Rename jar for release
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar=$(find composeApp/build/compose/jars -name '*.jar' | head -n1)
+          if [ -z "$jar" ]; then echo "no uber jar produced"; exit 1; fi
+          mkdir -p dist
+          cp "$jar" "dist/Embercrown-${{ matrix.os_token }}.jar"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os_token }}
+          path: dist/*.jar
+
+  android-and-launcher:
+    name: Android APK + launcher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Debug-signed: installable straight away, unlike an unsigned release APK. Swap in a real
+      # keystore here before shipping anything to the Play Store.
+      - name: Build Android APK
+        run: ./gradlew :composeApp:assembleDebug --no-daemon
+
+      - name: Build launcher
+        run: ./gradlew :launcher:jar --no-daemon
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          apk=$(find composeApp/build/outputs/apk -name '*.apk' | head -n1)
+          if [ -z "$apk" ]; then echo "no apk produced"; exit 1; fi
+          cp "$apk" dist/Embercrown-android.apk
+          cp launcher/build/libs/launcher.jar dist/Embercrown-Launcher.jar
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-and-launcher
+          path: dist/*
+
+  publish:
+    name: Attach to release
+    needs: [desktop, android-and-launcher]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: staged
+
+      - name: Flatten artifact directories
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find staged -type f \( -name '*.jar' -o -name '*.apk' \) -exec cp {} dist/ \;
+          ls -la dist
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: dist/*
+          fail_on_unmatched_files: true

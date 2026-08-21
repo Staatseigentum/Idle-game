@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.embercrown.game.BuildInfo
 import com.embercrown.game.game.AchievementDefinition
 import com.embercrown.game.game.AgeDefinition
 import com.embercrown.game.game.AppGraph
@@ -208,6 +209,7 @@ private fun MainContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
+        UpdateBanner(modifier = Modifier.padding(bottom = 8.dp))
         ResourceBar(gold = state.gold, perSecond = totalProduction(state))
         CentralScene(state = state)
         TabRow(selected = tab, onSelect = onTabChange)
@@ -619,6 +621,13 @@ private fun SystemSection(state: GameState) {
     var resetArmed by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(top = 12.dp)) {
+        Text(
+            text = "Embercrown ${BuildInfo.VERSION}",
+            color = EmberGold.copy(alpha = 0.5f),
+            fontSize = 11.sp,
+            fontFamily = pixelFontFamily(),
+            modifier = Modifier.padding(bottom = 10.dp),
+        )
         PixelButton(
             onClick = { AppGraph.engine.persistNow() },
         ) {

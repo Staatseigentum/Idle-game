@@ -140,4 +140,8 @@
     <string name="chronicle_realm_of_stars">Du zählst keine Jahre mehr, sondern Lichter.</string>
     <string name="chronicle_eternal_realm">Ewigkeit, anprobiert wie ein Mantel, der fast passt.</string>
     <string name="chronicle_embercrown">Der Thron bestand schon immer aus dem, was übrig blieb.</string>
+    <string name="update_available">Version %1$s verfügbar</string>
+    <string name="update_current_version">Du spielst %1$s</string>
+    <string name="update_download">Herunterladen</string>
+    <string name="update_dismiss">Später</string>
 </resources>

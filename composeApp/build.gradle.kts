@@ -9,7 +9,53 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
+val appVersion: String = providers.gradleProperty("embercrown.version").get()
+val appVersionCode: Int = providers.gradleProperty("embercrown.versionCode").get().toInt()
+val appRepo: String = providers.gradleProperty("embercrown.repo").get()
+
+/**
+ * Emits the version and repository into Kotlin source so the running app can compare itself
+ * against the newest GitHub release. Generating it keeps `gradle.properties` the only place a
+ * version number is written.
+ */
+val generateBuildInfo by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("generated/buildinfo/kotlin")
+    val version = appVersion
+    val repo = appRepo
+    inputs.property("version", version)
+    inputs.property("repo", repo)
+    outputs.dir(outputDir)
+    doLast {
+        val packageDir = outputDir.get().asFile.resolve("com/embercrown/game")
+        packageDir.mkdirs()
+        packageDir.resolve("BuildInfo.kt").writeText(
+            """
+            package com.embercrown.game
+
+            /** Generated from gradle.properties — do not edit by hand. */
+            object BuildInfo {
+                const val VERSION: String = "$version"
+                const val GITHUB_REPO: String = "$repo"
+            }
+
+            """.trimIndent(),
+        )
+    }
+}
+
 kotlin {
+    // Android and desktop are both JVM, so they share an intermediate `jvmShared` source set
+    // for the HttpURLConnection-based update fetch. Declared through the hierarchy template
+    // rather than manual dependsOn, which would disable the default iosMain grouping.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmShared") {
+                withAndroidTarget()
+                withJvm()
+            }
+        }
+    }
+
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -32,6 +78,7 @@ kotlin {
 
     sourceSets {
         val commonMain by getting {
+            kotlin.srcDir(generateBuildInfo)
             dependencies {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
@@ -74,8 +121,8 @@ android {
         applicationId = "com.embercrown.game"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersion
     }
 
     sourceSets["main"].apply {
@@ -126,7 +173,13 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
             )
             packageName = "Embercrown"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
+
+            macOS {
+                // jpackage rejects a major version of 0 on macOS, so the bundle carries 1.0.0
+                // while the app itself still reports `appVersion` through BuildInfo.
+                packageVersion = "1.0.0"
+            }
         }
     }
 }
