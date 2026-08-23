@@ -56,14 +56,16 @@ jobs:
         shell: bash
 
       # Native installer(s) for a fresh install: MSI on Windows, DMG on macOS, DEB+RPM on Linux.
+      # These package :launcher, not :composeApp — the installed app is the auto-updating
+      # bootstrap, which downloads and runs the uber jar built above (see launcher/build.gradle.kts).
       - name: Build native installer
         shell: bash
         run: |
           set -euo pipefail
           case "${{ matrix.os_token }}" in
-            windows) ./gradlew :composeApp:packageMsi --no-daemon ;;
-            macos)   ./gradlew :composeApp:packageDmg --no-daemon ;;
-            linux)   ./gradlew :composeApp:packageDeb :composeApp:packageRpm --no-daemon ;;
+            windows) ./gradlew :launcher:packageMsi --no-daemon ;;
+            macos)   ./gradlew :launcher:packageDmg --no-daemon ;;
+            linux)   ./gradlew :launcher:packageDeb :launcher:packageRpm --no-daemon ;;
           esac
 
       - name: Collect release files
@@ -75,7 +77,7 @@ jobs:
           mkdir -p dist
           cp "$jar" "dist/Embercrown-${{ matrix.os_token }}.jar"
 
-          installers=$(find composeApp/build/compose/binaries/main -type f \( -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \))
+          installers=$(find launcher/build/compose/binaries/main -type f \( -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \))
           if [ -z "$installers" ]; then echo "no installer produced"; exit 1; fi
           while IFS= read -r f; do
             ext="${f##*.}"
@@ -148,3 +150,50 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: dist/*
           fail_on_unmatched_files: true
+
+  itch:
+    name: Publish to itch.io
+    needs: [desktop, android-and-launcher]
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+      ITCH_TARGET: staatseigentum/embercrown
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: staged
+
+      # butler push replaces whatever it previously pushed to a given channel, so this alone
+      # keeps each platform page down to the current build — no separate delete step needed.
+      - name: Install butler
+        run: |
+          set -euo pipefail
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          echo "$PWD/butler" >> "$GITHUB_PATH"
+          butler -V
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Push Windows build (.msi)
+        run: butler push staged/desktop-windows/Embercrown-windows.msi "$ITCH_TARGET:windows" --userversion "${{ steps.version.outputs.version }}"
+
+      - name: Push macOS build (.dmg)
+        run: butler push staged/desktop-macos/Embercrown-macos.dmg "$ITCH_TARGET:mac" --userversion "${{ steps.version.outputs.version }}"
+
+      - name: Push Linux build (.deb + .rpm)
+        run: |
+          set -euo pipefail
+          mkdir -p linux-dist
+          cp staged/desktop-linux/Embercrown-linux.deb staged/desktop-linux/Embercrown-linux.rpm linux-dist/
+          butler push linux-dist "$ITCH_TARGET:linux" --userversion "${{ steps.version.outputs.version }}"
+
+      - name: Push Android build (.apk)
+        run: butler push staged/android-and-launcher/Embercrown-android.apk "$ITCH_TARGET:android" --userversion "${{ steps.version.outputs.version }}"

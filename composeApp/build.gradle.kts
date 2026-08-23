@@ -101,6 +101,7 @@ kotlin {
             dependencies {
                 implementation(compose.uiTooling)
                 implementation(libs.androidx.activityCompose)
+                implementation(libs.androidx.core)
             }
         }
 
@@ -177,63 +178,24 @@ val generateIcons by tasks.registering(JavaExec::class) {
     doFirst { args = listOf(outDir.get().asFile.absolutePath) }
 }
 
-// Every jpackage-based task needs the freshly rendered icon files first — including
-// createDistributable, which packageMsi/packageDmg/packageDeb/packageRpm each depend on and
-// which is what actually reads `iconFile`. Hooking package* by name isn't enough: Gradle doesn't
-// order same-level dependencies against each other, so createDistributable could (and on the
-// macOS runner did) run before generateIcons even though both are packageDmg's dependencies.
-tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
-    dependsOn(generateIcons)
-}
+// No jpackage-task icon wiring here anymore: this module builds no installers of its own (see
+// below), so nothing here reads `generateIcons`'s output. The equivalent dependency now lives in
+// launcher/build.gradle.kts, which is where the installers — and their icons — actually come from.
 
+// No `nativeDistributions.targetFormats` here on purpose: the installers a player actually runs
+// are now built from `:launcher` (see its build.gradle.kts), which auto-updates before starting
+// the game. This module only ever ships as the uber jar the launcher downloads and swaps in —
+// `packageUberJarForCurrentOS` needs none of the jpackage/installer config to work.
 compose.desktop {
     application {
         mainClass = "com.embercrown.game.MainKt"
 
         nativeDistributions {
-            // Each format only builds on its matching host OS, so `packageDistributionForCurrentOS`
-            // in CI naturally produces just the installer(s) for the runner it's on.
-            targetFormats(
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Rpm,
-            )
             packageName = "Embercrown"
             packageVersion = appVersion
             description = "Embercrown — a pixel-art idle/incremental game"
             vendor = "Staatseigentum"
             copyright = "© 2026 Staatseigentum"
-
-            windows {
-                menuGroup = "Embercrown"
-                perUserInstall = true
-                shortcut = true
-                dirChooser = true
-                // Fixed so a newer MSI upgrades the existing install instead of side-installing.
-                // Never change this once released.
-                upgradeUuid = "097346D8-58E2-462A-80F3-4BC19F18451B"
-                iconFile.set(iconOutputDir.map { it.file("icon.ico") })
-            }
-
-            macOS {
-                bundleID = "com.embercrown.game"
-                dockName = "Embercrown"
-                // jpackage rejects a major version of 0 on macOS, so the bundle carries 1.0.0
-                // while the app itself still reports `appVersion` through BuildInfo.
-                packageVersion = "1.0.0"
-                iconFile.set(iconOutputDir.map { it.file("icon.icns") })
-            }
-
-            linux {
-                shortcut = true
-                appCategory = "Game"
-                menuGroup = "Games"
-                // GitHub's noreply address avoids embedding a personal email in a public installer.
-                debMaintainer = "Staatseigentum <staatseigentum@users.noreply.github.com>"
-                rpmLicenseType = "Proprietary"
-                iconFile.set(iconOutputDir.map { it.file("icon.png") })
-            }
         }
     }
 }

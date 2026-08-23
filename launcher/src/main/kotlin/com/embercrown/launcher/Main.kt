@@ -1,6 +1,7 @@
 package com.embercrown.launcher
 
 import java.io.File
+import java.net.URLClassLoader
 import java.util.Properties
 import kotlin.system.exitProcess
 
@@ -51,7 +52,9 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    exitProcess(launchGame(gameJar))
+    launchGame(gameJar)
+    // Reached only if the game returned control without exiting the JVM itself.
+    exitProcess(0)
 }
 
 /** Downloads and installs a newer release, if GitHub reports one. */
@@ -99,21 +102,42 @@ private fun updateIfNeeded(installed: Version?, gameJar: File, stateFile: File) 
     log("updated to $latest")
 }
 
-/** Runs the game in a child JVM and returns its exit code. */
-private fun launchGame(gameJar: File): Int {
-    val javaHome = File(System.getProperty("java.home"))
-    val isWindows = System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)
-    val binDir = File(javaHome, "bin")
-    val candidates = if (isWindows) listOf("javaw.exe", "java.exe") else listOf("java")
-    val javaBin = candidates.map { File(binDir, it) }.firstOrNull { it.isFile }
-        ?: error("no java executable found under ${binDir.absolutePath}")
+/**
+ * Loads the game jar into this JVM and runs it directly, rather than shelling out to a `java`/
+ * `javaw` binary.
+ *
+ * That used to spawn a child process, but a jpackage app image's bundled runtime (under
+ * `runtime/`, used once this launcher itself ships as a native installer) deliberately has no
+ * standalone `java`/`javaw` executable to spawn — jpackage strips it, since the image is meant
+ * to be entered only through the app's own native launcher exe. Class-loading the jar in-process
+ * sidesteps that entirely and works identically for the plain `java -jar Embercrown-Launcher.jar`
+ * fallback. The game's own `main()` blocks until its window closes (Compose Desktop's
+ * `application {}` runs the event loop on the calling thread), so this returns only once the
+ * player has quit.
+ */
+private fun launchGame(gameJar: File) {
+    // When this launcher itself runs from a jpackage app image, jpackage injects
+    // -Dskiko.library.path and -Dcompose.application.resources.dir pointing at *this app's own*
+    // directory (it has no idea a second Compose app is about to be loaded into the same JVM).
+    // Left in place, the game's Skiko/resource loading would look for its native library and
+    // bundled resources next to the launcher's jars instead of inside its own uber jar, and fail.
+    // Clearing them makes the game fall back to its normal standalone behavior: extracting Skiko
+    // from its own jar and reading its own bundled compose resources.
+    System.clearProperty("skiko.library.path")
+    System.clearProperty("compose.application.resources.dir")
 
+    // A platform-only parent isolates the game's bundled kotlin-stdlib/kotlinx-serialization
+    // from this launcher's own copies on the classpath, avoiding a version clash between them.
+    val classLoader = URLClassLoader(arrayOf(gameJar.toURI().toURL()), ClassLoader.getPlatformClassLoader())
+    val mainClass = Class.forName("com.embercrown.game.MainKt", true, classLoader)
+    val mainMethod = mainClass.getMethod("main", Array<String>::class.java)
     log("starting ${gameJar.name}")
-    val process = ProcessBuilder(javaBin.absolutePath, "-jar", gameJar.absolutePath)
-        .directory(gameJar.parentFile)
-        .inheritIO()
-        .start()
-    return process.waitFor()
+    Thread.currentThread().contextClassLoader = classLoader
+    try {
+        mainMethod.invoke(null, arrayOf<String>())
+    } catch (e: java.lang.reflect.InvocationTargetException) {
+        throw e.cause ?: e
+    }
 }
 
 /** The directory the launcher jar itself lives in, falling back to the working directory. */

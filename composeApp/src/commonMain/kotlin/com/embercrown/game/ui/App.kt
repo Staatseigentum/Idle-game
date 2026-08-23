@@ -159,6 +159,7 @@ import com.embercrown.game.resources.verfalls_label
 import com.embercrown.game.resources.wiedergeburt_button
 import com.embercrown.game.resources.wiedergeburt_locked_hint
 import com.embercrown.game.resources.wiedergeburt_title
+import com.embercrown.game.update.autoUpdateIfNeeded
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
@@ -201,6 +202,10 @@ private val EmbercrownColors = darkColorScheme(
 @Composable
 fun App() {
     val uiSettings by AppGraph.uiSettings.state.collectAsState()
+    // Fires once per launch, independent of UpdateBanner: on desktop this is normally a no-op
+    // (the launcher already updated the jar before this process started), on Android it
+    // downloads and installs a newer build with no confirmation of our own.
+    LaunchedEffect(Unit) { autoUpdateIfNeeded() }
     LaunchedEffect(uiSettings.masterVolume, uiSettings.muted) {
         AppGraph.soundPlayer.setVolume(uiSettings.masterVolume)
         AppGraph.soundPlayer.setMuted(uiSettings.muted)
