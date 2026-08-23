@@ -19,6 +19,8 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -983,6 +985,16 @@ private fun ReichColumn(
     modifier: Modifier = Modifier,
 ) {
     var tab by remember { mutableStateOf(ReichTab.REALM) }
+    // Building list and tab content share one scroll region (see the reachability comment
+    // below), which means switching tabs can land the new content below the fold behind a long
+    // building list — invisible, and indistinguishable from the click not having worked at all.
+    // bringIntoView() on every tab change (but not the initial composition) scrolls it into view.
+    val tabContentBringIntoView = remember { BringIntoViewRequester() }
+    var tabInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(tab) {
+        if (tabInitialized) tabContentBringIntoView.bringIntoView()
+        tabInitialized = true
+    }
     // BuildingsHeader, the tab bar and the footer are fixed; only the middle (building list +
     // selected tab content) scrolls — a long building list must never push the tab bar or the
     // Verfall button below the window's visible bounds.
@@ -1015,7 +1027,11 @@ private fun ReichColumn(
                 .verticalScroll(rememberScrollState()),
         ) {
             BuildingsList(state = state, multiplier = multiplier, compact = false)
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .bringIntoViewRequester(tabContentBringIntoView),
+            ) {
                 when (tab) {
                     ReichTab.REALM -> RealmTabContent(state)
                     ReichTab.ACHIEVEMENTS -> AchievementsTabContent(state)
