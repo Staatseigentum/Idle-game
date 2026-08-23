@@ -65,9 +65,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -102,6 +106,7 @@ import com.embercrown.game.game.academyUpgradeCost
 import com.embercrown.game.game.bulkBuildingCost
 import com.embercrown.game.game.buildingProduction
 import com.embercrown.game.game.chroniclePointsForVerfall
+import com.embercrown.game.game.clickGain
 import com.embercrown.game.game.influenceProduction
 import com.embercrown.game.game.isBuildingUnlocked
 import com.embercrown.game.game.legacyUpgradeCost
@@ -118,6 +123,7 @@ import com.embercrown.game.ui.pixelart.PixelEdge
 import com.embercrown.game.ui.pixelart.PixelFit
 import com.embercrown.game.ui.pixelart.PixelSegmentedBar
 import com.embercrown.game.ui.pixelart.PixelSwitch
+import com.embercrown.game.ui.pixelart.ageCrestArt
 import com.embercrown.game.ui.pixelart.ageSceneArt
 import com.embercrown.game.ui.pixelart.buildingIcon
 import com.embercrown.game.ui.pixelart.chroniclePointsIcon
@@ -131,10 +137,13 @@ import com.embercrown.game.ui.pixelart.Ramps
 import com.embercrown.game.ui.pixelart.pixelFrame
 import com.embercrown.game.ui.pixelart.sagenIcon
 import com.embercrown.game.resources.Res
+import com.embercrown.game.resources.academy_card_description
 import com.embercrown.game.resources.academy_level_label
 import com.embercrown.game.resources.academy_study_button
 import com.embercrown.game.resources.academy_title
 import com.embercrown.game.resources.academy_upgrade_button
+import com.embercrown.game.resources.age_ladder_progress_label
+import com.embercrown.game.resources.age_stage_progress_label
 import com.embercrown.game.resources.ages_title
 import com.embercrown.game.resources.app_name
 import com.embercrown.game.resources.buildings_title
@@ -143,6 +152,12 @@ import com.embercrown.game.resources.buy_multiplier_label
 import com.embercrown.game.resources.chronicle_card_title
 import com.embercrown.game.resources.chronicle_empty_hint
 import com.embercrown.game.resources.chronicle_points_label
+import com.embercrown.game.resources.click_for_gold_label
+import com.embercrown.game.resources.currencies_label
+import com.embercrown.game.resources.currency_abbr_achievements
+import com.embercrown.game.resources.currency_abbr_chronicle
+import com.embercrown.game.resources.currency_abbr_influence
+import com.embercrown.game.resources.currency_abbr_legends
 import com.embercrown.game.resources.dragon_buff_badge
 import com.embercrown.game.resources.dynasty_path_activate_button
 import com.embercrown.game.resources.dynasty_path_invest_button
@@ -168,14 +183,19 @@ import com.embercrown.game.resources.offline_flavor_short
 import com.embercrown.game.resources.offline_report_body
 import com.embercrown.game.resources.offline_report_dismiss_button
 import com.embercrown.game.resources.offline_report_title
+import com.embercrown.game.resources.per_click_label
+import com.embercrown.game.resources.production_label
 import com.embercrown.game.resources.quest_claim_button
 import com.embercrown.game.resources.quest_reward_label
 import com.embercrown.game.resources.quests_empty_hint
 import com.embercrown.game.resources.quests_title
 import com.embercrown.game.resources.ratssaal_buy_button
+import com.embercrown.game.resources.ratssaal_card_description
 import com.embercrown.game.resources.ratssaal_owned_label
 import com.embercrown.game.resources.ratssaal_title
+import com.embercrown.game.resources.rail_chronicle_label
 import com.embercrown.game.resources.reign_tab_achievements
+import com.embercrown.game.resources.reign_tab_realm
 import com.embercrown.game.resources.reign_tab_system
 import com.embercrown.game.resources.reign_title
 import com.embercrown.game.resources.reward_yield_label
@@ -197,6 +217,7 @@ import com.embercrown.game.resources.tab_reign
 import com.embercrown.game.resources.verfall_button
 import com.embercrown.game.resources.verfall_corruption_label
 import com.embercrown.game.resources.verfall_description
+import com.embercrown.game.resources.verfall_footer_yield_label
 import com.embercrown.game.resources.verfall_locked_hint
 import com.embercrown.game.resources.verfall_survived_short
 import com.embercrown.game.resources.verfall_title
@@ -288,6 +309,7 @@ fun App() {
                     var multiplier by remember { mutableStateOf(BuyMultiplier.X1) }
                     var achievementToastId by remember { mutableStateOf<String?>(null) }
                     var ageUpCelebration by remember { mutableStateOf(false) }
+                    var blightAnimationRunning by remember { mutableStateOf(false) }
 
                     // Single root-level collector: drives sound for every event, plus the two
                     // animation states (toast, celebration) that need to survive phone-nav tab
@@ -318,10 +340,24 @@ fun App() {
                     val offlineReport by AppGraph.engine.offlineReport.collectAsState()
 
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        if (maxWidth >= 700.dp) {
-                            DesktopLayout(state = state, multiplier = multiplier, onMultiplierChange = { multiplier = it })
-                        } else {
-                            PhoneLayout(state = state, multiplier = multiplier, onMultiplierChange = { multiplier = it })
+                        val isDesktop = maxWidth >= 700.dp
+                        val onTriggerVerfall: () -> Unit = { if (!blightAnimationRunning) blightAnimationRunning = true }
+                        VerfallCollapseOverlay(
+                            trigger = blightAnimationRunning,
+                            state = state,
+                            columns = if (isDesktop) 30 else 13,
+                            rows = if (isDesktop) 17 else 24,
+                            showRip = isDesktop,
+                            titleFontSize = if (isDesktop) 34.sp else 17.sp,
+                            yieldFontSize = if (isDesktop) 22.sp else 14.sp,
+                            onFinished = { blightAnimationRunning = false },
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (isDesktop) {
+                                DesktopLayout(state = state, multiplier = multiplier, onMultiplierChange = { multiplier = it }, onTriggerVerfall = onTriggerVerfall)
+                            } else {
+                                PhoneLayout(state = state, multiplier = multiplier, onMultiplierChange = { multiplier = it }, onTriggerVerfall = onTriggerVerfall)
+                            }
                         }
                         AgeUpCelebration(visible = ageUpCelebration, modifier = Modifier.matchParentSize())
                         AchievementToast(achievementId = achievementToastId, modifier = Modifier.align(Alignment.TopCenter))
@@ -484,70 +520,69 @@ private fun formatCooldown(totalSeconds: Long): String {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun PhoneLayout(state: GameState, multiplier: BuyMultiplier, onMultiplierChange: (BuyMultiplier) -> Unit) {
+private fun PhoneLayout(
+    state: GameState,
+    multiplier: BuyMultiplier,
+    onMultiplierChange: (BuyMultiplier) -> Unit,
+    onTriggerVerfall: () -> Unit,
+) {
     var destination by remember { mutableStateOf(PhoneDestination.HOLDINGS) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         CurrencyHeaderPhone(state)
         UpdateBanner(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
-        SceneBanner(
+        SceneStage(
             state = state,
-            height = 132.dp,
-            nameFontSize = 15.sp,
-            showChronicle = false,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth().height(230.dp),
+            clickHintFontSize = 10.sp,
+            tipBarWidth = 220.dp,
         )
-        ProgressRow(state = state, horizontalPadding = 12.dp, verticalPadding = 9.dp, showAbsoluteValues = false)
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when (destination) {
                 PhoneDestination.HOLDINGS ->
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
-                        BuildingsSection(state = state, multiplier = multiplier, onMultiplierChange = onMultiplierChange, columns = 1)
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        BuildingsSection(state = state, multiplier = multiplier, onMultiplierChange = onMultiplierChange, compact = true)
                     }
                 PhoneDestination.REIGN ->
-                    Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        QuestsCard(state)
-                        VerfallCard(state)
-                        AcademyCard(state)
-                        DynastyCard(state)
-                        HeirCard(state)
-                        RatssaalCard(state)
-                        WondersCard(state)
-                        ChronicleCard(state)
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        RealmTabContent(state)
                     }
                 PhoneDestination.ACHIEVEMENTS ->
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
-                        AchievementsBlock(state)
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        AchievementsTabContent(state)
                     }
                 PhoneDestination.SYSTEM ->
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
-                        RulesSystemBlock(state)
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        SystemTabContent(state)
                     }
             }
         }
 
+        VerfallFooterStrip(state = state, onTriggerVerfall = onTriggerVerfall, compact = true)
         FooterNav(selected = destination, onSelect = { destination = it }, state = state)
     }
 }
 
 @Composable
 private fun CurrencyHeaderPhone(state: GameState) {
+    val next = state.nextAge
+    val progress = next?.let { (state.lifetimeGold / it.lifetimeGoldThreshold).toFloat().coerceIn(0f, 1f) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(EmberHeaderBar)
             .pixelEdgeLine(PixelEdge.Bottom)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PixelArtImage(remember { goldIcon() }, modifier = Modifier.size(26.dp))
-                Text(formatAmount(state.gold), color = EmberGold, fontSize = 20.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 8.dp))
-            }
+        Text(stringResource(Res.string.gold_label).uppercase(), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.12f.em)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text(formatAmount(state.gold), color = EmberGoldBright, fontSize = 26.sp, fontFamily = pixelFontFamily())
             if (state.dragonBuffTicksRemaining > 0) {
                 Box(modifier = Modifier.pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)) {
                     Text(
@@ -559,46 +594,86 @@ private fun CurrencyHeaderPhone(state: GameState) {
                     )
                 }
             } else {
-                Text("+${formatAmount(totalProduction(state))}/s", color = EmberGoldBright, fontSize = 11.sp, fontFamily = pixelFontFamily())
+                Text("+${formatAmount(totalProduction(state))}/s", color = EmberGold, fontSize = 11.sp, fontFamily = pixelFontFamily())
             }
         }
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconValueLabel(
-                icon = { PixelArtImage(remember { chroniclePointsIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 16.dp,
-                value = formatAmount(state.chroniclePoints),
-                valueColor = EmberGold.copy(alpha = 0.85f),
-                valueFontSize = 12.sp,
-                label = stringResource(Res.string.chronicle_points_label),
-                labelFontSize = 11.sp,
-                modifier = Modifier.padding(end = 14.dp),
+        if (next != null && progress != null) {
+            Text(
+                "${stringResource(state.currentAge.nameRes).uppercase()} > ${stringResource(next.nameRes).uppercase()} · ${(progress * 100).toInt()}%",
+                color = EmberDim,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 14.dp),
             )
-            IconValueLabel(
-                icon = { PixelArtImage(remember { sagenIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 16.dp,
-                value = formatAmount(state.sagen),
-                valueColor = EmberGold.copy(alpha = 0.85f),
-                valueFontSize = 12.sp,
-                label = stringResource(Res.string.legends_label),
-                labelFontSize = 11.sp,
-                modifier = Modifier.padding(end = 14.dp),
+            PixelSegmentedBar(progress = progress, segments = 20, modifier = Modifier.fillMaxWidth().height(9.dp).padding(top = 8.dp))
+        }
+    }
+}
+
+@Composable
+private fun VerfallFooterStrip(
+    state: GameState,
+    onTriggerVerfall: () -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val canTrigger = state.lifetimeGold >= MIN_LIFETIME_GOLD_FOR_VERFALL
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .let { if (!compact) it.height(74.dp) else it }
+            .background(EmberBackground)
+            .pixelEdgeLine(PixelEdge.Top)
+            .padding(horizontal = 16.dp, vertical = if (compact) 12.dp else 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (canTrigger) {
+            val template = stringResource(Res.string.verfall_footer_yield_label)
+            val amountText = formatAmount(chroniclePointsForVerfall(state))
+            val parts = template.split("%1\$s")
+            val annotated = buildAnnotatedString {
+                append(parts.getOrElse(0) { "" })
+                withStyle(SpanStyle(color = EmberGoldBright)) { append(amountText) }
+                append(parts.getOrElse(1) { "" })
+            }
+            Text(
+                annotated,
+                color = EmberDim,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                lineHeight = 1.8.em,
+                modifier = Modifier.widthIn(max = 200.dp).weight(1f, fill = false),
             )
-            IconValueLabel(
-                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 16.dp,
-                value = formatAmount(state.einfluss),
-                valueColor = EmberGold.copy(alpha = 0.85f),
-                valueFontSize = 12.sp,
-                label = stringResource(Res.string.einfluss_label),
-                labelFontSize = 11.sp,
+        } else {
+            Text(
+                stringResource(Res.string.verfall_locked_hint, formatAmount(MIN_LIFETIME_GOLD_FOR_VERFALL)),
+                color = EmberDim,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                lineHeight = 1.6.em,
+                modifier = Modifier.widthIn(max = 200.dp).weight(1f, fill = false),
             )
-            Spacer(modifier = Modifier.weight(1f))
-            ValueLabel(
-                value = "${state.unlockedAchievements.size}/${AchievementDefinition.all.size}",
-                label = stringResource(Res.string.reign_tab_achievements),
-                valueColor = EmberGold.copy(alpha = 0.85f),
-                valueFontSize = 12.sp,
-                labelFontSize = 11.sp,
+        }
+        Box(
+            modifier = Modifier
+                .padding(start = 12.dp)
+                .pixelFrame(
+                    fill = if (canTrigger) EmberAccent else EmberPanel,
+                    bevelLight = if (canTrigger) EmberAccentBright else EmberPalette.BevelLight,
+                )
+                .clickable(enabled = canTrigger) { onTriggerVerfall() }
+                .padding(horizontal = if (compact) 14.dp else 18.dp, vertical = if (compact) 11.dp else 14.dp),
+        ) {
+            Text(
+                stringResource(Res.string.verfall_button).uppercase(),
+                color = if (canTrigger) EmberWhite else EmberDim,
+                fontSize = if (compact) 9.sp else 10.sp,
+                fontFamily = pixelFontFamily(),
+                letterSpacing = 0.1f.em,
+                maxLines = 1,
             )
         }
     }
@@ -628,18 +703,17 @@ private fun FooterNav(selected: PhoneDestination, onSelect: (PhoneDestination) -
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
                     .let { if (index < PhoneDestination.entries.lastIndex) it.pixelEdgeLine(PixelEdge.End) else it }
-                    .background(if (isSelected) EmberPanelLight else Color.Transparent)
+                    .background(if (isSelected) EmberPanel else Color.Transparent)
                     .clickable { onSelect(destination) }
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
                     stringResource(destination.labelRes).uppercase(),
-                    color = if (isSelected) EmberGoldBright else EmberGold.copy(alpha = 0.8f),
-                    fontSize = 10.sp,
+                    color = if (isSelected) EmberGoldBright else EmberGold.copy(alpha = 0.7f),
+                    fontSize = 9.sp,
                     fontFamily = pixelFontFamily(),
                 )
                 val sub = when (destination) {
@@ -652,8 +726,8 @@ private fun FooterNav(selected: PhoneDestination, onSelect: (PhoneDestination) -
                     Text(
                         sub,
                         color = if (destination == PhoneDestination.REIGN && reignBadge > 0) EmberAccent else EmberDim,
-                        fontSize = 10.sp,
-                        modifier = Modifier.padding(top = 4.dp),
+                        fontSize = 8.sp,
+                        modifier = Modifier.padding(top = 7.dp),
                     )
                 }
             }
@@ -665,123 +739,154 @@ private fun FooterNav(selected: PhoneDestination, onSelect: (PhoneDestination) -
 // Desktop (>= 700 dp)
 // ---------------------------------------------------------------------------------------------
 
+private enum class ReichTab(val labelRes: StringResource) {
+    REALM(Res.string.reign_tab_realm),
+    ACHIEVEMENTS(Res.string.reign_tab_achievements),
+    SYSTEM(Res.string.reign_tab_system),
+}
+
 @Composable
-private fun DesktopLayout(state: GameState, multiplier: BuyMultiplier, onMultiplierChange: (BuyMultiplier) -> Unit) {
+private fun DesktopLayout(
+    state: GameState,
+    multiplier: BuyMultiplier,
+    onMultiplierChange: (BuyMultiplier) -> Unit,
+    onTriggerVerfall: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         CurrencyHeaderDesktop(state)
         UpdateBanner(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            AgesRail(state = state, modifier = Modifier.width(196.dp).fillMaxHeight())
-
-            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                SceneBanner(
-                    state = state,
-                    height = 220.dp,
-                    nameFontSize = 18.sp,
-                    showChronicle = true,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-                ProgressRow(state = state, horizontalPadding = 16.dp, verticalPadding = 10.dp, showAbsoluteValues = true)
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                ) {
-                    BuildingsSection(state = state, multiplier = multiplier, onMultiplierChange = onMultiplierChange, columns = 2)
-                }
-            }
-
-            ReichColumn(state = state, modifier = Modifier.width(336.dp).fillMaxHeight())
+            AgesRail(state = state, modifier = Modifier.width(214.dp).fillMaxHeight())
+            SceneStage(state = state, modifier = Modifier.weight(1f).fillMaxHeight())
+            ReichColumn(
+                state = state,
+                multiplier = multiplier,
+                onMultiplierChange = onMultiplierChange,
+                onTriggerVerfall = onTriggerVerfall,
+                modifier = Modifier.width(520.dp).fillMaxHeight(),
+            )
         }
     }
 }
 
 @Composable
+private fun HeaderMiniStat(color: Color, value: String, abbrRes: StringResource) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(10.dp).background(color))
+        Text(value, color = EmberGoldBright, fontSize = 11.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+        Text(stringResource(abbrRes), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 4.dp))
+    }
+}
+
+@Composable
 private fun CurrencyHeaderDesktop(state: GameState) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .background(EmberHeaderBar)
-            .pixelEdgeLine(PixelEdge.Bottom)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Text(
-            stringResource(Res.string.app_name).uppercase(),
-            color = EmberAccent,
-            fontSize = 12.sp,
-            fontFamily = pixelFontFamily(),
-            letterSpacing = 0.06f.em,
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PixelArtImage(remember { goldIcon() }, modifier = Modifier.size(28.dp))
-            Text(formatAmount(state.gold), color = EmberGold, fontSize = 20.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 8.dp))
+    val next = state.nextAge
+    Row(modifier = Modifier.fillMaxWidth().height(92.dp).background(EmberHeaderBar).pixelEdgeLine(PixelEdge.Bottom)) {
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().pixelEdgeLine(PixelEdge.End).padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(stringResource(Res.string.gold_label).uppercase(), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.12f.em)
             Text(
-                "+${formatAmount(totalProduction(state))}/s",
+                formatAmount(state.gold),
                 color = EmberGoldBright,
-                fontSize = 11.sp,
+                fontSize = 30.sp,
                 fontFamily = pixelFontFamily(),
-                modifier = Modifier.padding(start = 4.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 12.dp),
             )
+        }
+        Column(
+            modifier = Modifier.width(250.dp).fillMaxHeight().pixelEdgeLine(PixelEdge.End).padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(stringResource(Res.string.production_label), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily())
             if (state.dragonBuffTicksRemaining > 0) {
-                Box(modifier = Modifier.padding(start = 10.dp).pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)) {
-                    Text(
-                        stringResource(Res.string.dragon_buff_badge, state.dragonBuffTicksRemaining),
-                        color = EmberWhite,
-                        fontSize = 10.sp,
-                        fontFamily = pixelFontFamily(),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                    )
-                }
+                Text(
+                    stringResource(Res.string.dragon_buff_badge, state.dragonBuffTicksRemaining),
+                    color = EmberGold,
+                    fontSize = 17.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text("${formatAmount(totalProduction(state))} /s", color = EmberGold, fontSize = 17.sp, fontFamily = pixelFontFamily(), maxLines = 1)
+            }
+            Text(
+                stringResource(Res.string.per_click_label, formatAmount(clickGain(state))),
+                color = EmberDim,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                modifier = Modifier.padding(top = 7.dp),
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight().pixelEdgeLine(PixelEdge.End).padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                "${stringResource(state.currentAge.nameRes).uppercase()}${if (next != null) " > ${stringResource(next.nameRes).uppercase()}" else ""}",
+                color = EmberGold,
+                fontSize = 10.sp,
+                fontFamily = pixelFontFamily(),
+                letterSpacing = 0.1f.em,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (next != null) {
+                val progress = (state.lifetimeGold / next.lifetimeGoldThreshold).toFloat().coerceIn(0f, 1f)
+                PixelSegmentedBar(
+                    progress = progress,
+                    segments = 20,
+                    filledColor = EmberGold,
+                    emptyColor = EmberPalette.Panel,
+                    modifier = Modifier.fillMaxWidth().padding(top = 13.dp).height(11.dp),
+                )
             }
         }
-        Spacer(modifier = Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconValueLabel(
-                icon = { PixelArtImage(remember { chroniclePointsIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 20.dp,
-                value = formatAmount(state.chroniclePoints),
-                valueColor = EmberGold,
-                valueFontSize = 13.sp,
-                label = stringResource(Res.string.chronicle_points_label),
-                labelFontSize = 11.sp,
-            )
-            IconValueLabel(
-                icon = { PixelArtImage(remember { sagenIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 20.dp,
-                value = formatAmount(state.sagen),
-                valueColor = EmberGold,
-                valueFontSize = 13.sp,
-                label = stringResource(Res.string.legends_label),
-                labelFontSize = 11.sp,
-            )
-            IconValueLabel(
-                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 20.dp,
-                value = formatAmount(state.einfluss),
-                valueColor = EmberGold,
-                valueFontSize = 13.sp,
-                label = stringResource(Res.string.einfluss_label),
-                labelFontSize = 11.sp,
-            )
-            ValueLabel(
-                value = "${state.unlockedAchievements.size}/${AchievementDefinition.all.size}",
-                label = stringResource(Res.string.reign_tab_achievements),
-                valueColor = EmberGold,
-                valueFontSize = 13.sp,
-                labelFontSize = 11.sp,
-            )
-            ValueLabel(
-                value = state.verfallCount.toString(),
-                label = stringResource(Res.string.verfalls_label),
-                valueColor = EmberGold,
-                valueFontSize = 13.sp,
-                labelFontSize = 11.sp,
-            )
+        Column(
+            modifier = Modifier.fillMaxHeight().padding(horizontal = 18.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (next != null) {
+                val remaining = (next.lifetimeGoldThreshold - state.lifetimeGold).coerceAtLeast(0.0)
+                Text(
+                    stringResource(Res.string.age_stage_progress_label, state.currentAge.index + 1, AgeDefinition.all.size, formatAmount(remaining)),
+                    color = EmberDim,
+                    fontSize = 10.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(modifier = Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (state.dragonBuffTicksRemaining > 0) {
+                    Box(modifier = Modifier.padding(end = 10.dp).pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)) {
+                        Text(
+                            stringResource(Res.string.dragon_buff_badge, state.dragonBuffTicksRemaining),
+                            color = EmberWhite,
+                            fontSize = 9.sp,
+                            fontFamily = pixelFontFamily(),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+                HeaderMiniStat(Ramps.PaperLight, formatAmount(state.chroniclePoints), Res.string.currency_abbr_chronicle)
+                Spacer(modifier = Modifier.width(14.dp))
+                HeaderMiniStat(Ramps.ArcaneLight, formatAmount(state.sagen), Res.string.currency_abbr_legends)
+                Spacer(modifier = Modifier.width(14.dp))
+                HeaderMiniStat(Ramps.ClothLight, formatAmount(state.einfluss), Res.string.currency_abbr_influence)
+                Spacer(modifier = Modifier.width(14.dp))
+                HeaderMiniStat(
+                    EmberGold,
+                    "${state.unlockedAchievements.size}/${AchievementDefinition.all.size}",
+                    Res.string.currency_abbr_achievements,
+                )
+            }
         }
     }
 }
@@ -790,21 +895,56 @@ private fun CurrencyHeaderDesktop(state: GameState) {
 private fun AgesRail(state: GameState, modifier: Modifier = Modifier) {
     Column(modifier = modifier.background(EmberRail).pixelEdgeLine(PixelEdge.End)) {
         Text(
-            stringResource(Res.string.ages_title).uppercase(),
+            stringResource(Res.string.age_ladder_progress_label, state.currentAge.index + 1, AgeDefinition.all.size),
             color = EmberDim,
             fontSize = 9.sp,
             fontFamily = pixelFontFamily(),
-            letterSpacing = 0.08f.em,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            letterSpacing = 0.1f.em,
+            modifier = Modifier.fillMaxWidth().pixelEdgeLine(PixelEdge.Bottom).padding(horizontal = 14.dp, vertical = 11.dp),
         )
+        // Portrait crest for the current age — distinct from the wide ageSceneArt landscape on
+        // the stage, this is the small heraldic shield that grows more ornate as ages climb.
+        val crestCorruptionBucket = (state.corruption * 40).roundToInt()
+        Box(modifier = Modifier.fillMaxWidth().pixelEdgeLine(PixelEdge.Bottom).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+            PixelArtImage(
+                art = remember(state.currentAge.index, crestCorruptionBucket) {
+                    val base = ageCrestArt(state.currentAge.index, AgeDefinition.all.size)
+                    if (crestCorruptionBucket <= 0) base else base.corrupted(crestCorruptionBucket / 40f)
+                },
+                modifier = Modifier.height(132.dp).width(104.dp),
+                fit = PixelFit.Contain,
+            )
+        }
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp)
-                .padding(bottom = 10.dp),
+                .padding(vertical = 10.dp),
         ) {
             AgeDefinition.all.forEach { age -> AgeRailRow(age = age, state = state) }
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(EmberBackground)
+                .pixelEdgeLine(PixelEdge.Top)
+                .padding(14.dp),
+        ) {
+            Text(
+                stringResource(Res.string.rail_chronicle_label, stringResource(state.currentAge.nameRes).uppercase()),
+                color = EmberAccent,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                letterSpacing = 0.1f.em,
+            )
+            Text(
+                stringResource(state.currentAge.chronicleRes),
+                color = EmberDim,
+                fontSize = 10.sp,
+                fontFamily = pixelFontFamily(),
+                lineHeight = 1.85.em,
+                modifier = Modifier.padding(top = 9.dp),
+            )
         }
     }
 }
@@ -813,77 +953,95 @@ private fun AgesRail(state: GameState, modifier: Modifier = Modifier) {
 private fun AgeRailRow(age: AgeDefinition, state: GameState) {
     val current = age.index == state.currentAge.index
     val reached = state.lifetimeGold >= age.lifetimeGoldThreshold
-    val background = if (current) EmberPanelLight else Color.Transparent
-    val markColor = if (current) EmberGold else if (reached) EmberPalette.BevelLight else Color.Transparent
-    val nameColor = if (current) EmberGoldBright else if (reached) EmberGold.copy(alpha = 0.75f) else LockedTextColor
-    val numColor = if (current) EmberGold else LockedTextColor
+    val background = if (current) EmberPanel else Color.Transparent
+    val markColor = if (current) EmberGold else if (reached) EmberPalette.BevelLight else Color(0xFF1F1811)
+    val nameColor = if (current) EmberGoldBright else if (reached) EmberGold.copy(alpha = 0.72f) else LockedTextColor
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(30.dp)
-            .padding(bottom = 2.dp)
-            .background(background),
+        modifier = Modifier.fillMaxWidth().height(28.dp).background(background).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.width(3.dp).fillMaxHeight().background(markColor))
-        Row(modifier = Modifier.weight(1f).padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text((age.index + 1).toString().padStart(2, '0'), color = numColor, fontSize = 8.sp, fontFamily = pixelFontFamily(), modifier = Modifier.width(16.dp))
-            Text(stringResource(age.nameRes), color = nameColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        Box(modifier = Modifier.size(11.dp).background(markColor))
+        Text(
+            stringResource(age.nameRes),
+            color = nameColor,
+            fontSize = 10.sp,
+            fontFamily = pixelFontFamily(),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 9.dp),
+        )
     }
 }
 
 @Composable
-private fun ReichColumn(state: GameState, modifier: Modifier = Modifier) {
+private fun ReichColumn(
+    state: GameState,
+    multiplier: BuyMultiplier,
+    onMultiplierChange: (BuyMultiplier) -> Unit,
+    onTriggerVerfall: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var tab by remember { mutableStateOf(ReichTab.REALM) }
+    // BuildingsHeader, the tab bar and the footer are fixed; only the middle (building list +
+    // selected tab content) scrolls — a long building list must never push the tab bar or the
+    // Verfall button below the window's visible bounds.
     Column(modifier = modifier.background(EmberRail).pixelEdgeLine(PixelEdge.Start)) {
-        Text(
-            stringResource(Res.string.reign_title).uppercase(),
-            color = EmberDim,
-            fontSize = 9.sp,
-            fontFamily = pixelFontFamily(),
-            letterSpacing = 0.08f.em,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-        )
+        BuildingsHeader(multiplier = multiplier, onMultiplierChange = onMultiplierChange, compact = false)
+
+        Row(modifier = Modifier.fillMaxWidth().pixelEdgeLine(PixelEdge.Bottom)) {
+            ReichTab.entries.forEach { entry ->
+                val isSelected = entry == tab
+                Box(
+                    modifier = Modifier
+                        .background(if (isSelected) EmberPanel else Color.Transparent)
+                        .clickable { tab = entry }
+                        .padding(horizontal = 20.dp, vertical = 13.dp),
+                ) {
+                    Text(
+                        stringResource(entry.labelRes).uppercase(),
+                        color = if (isSelected) EmberGoldBright else EmberDim,
+                        fontSize = 10.sp,
+                        fontFamily = pixelFontFamily(),
+                        letterSpacing = 0.08f.em,
+                    )
+                }
+            }
+        }
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
-            QuestsCard(state)
-            VerfallCard(state)
-            AcademyCard(state)
-            DynastyCard(state)
-            HeirCard(state)
-            RatssaalCard(state)
-            WondersCard(state)
-            ChronicleCard(state)
-            AchievementsBlock(state)
-            RulesSystemBlock(state)
+            BuildingsList(state = state, multiplier = multiplier, compact = false)
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                when (tab) {
+                    ReichTab.REALM -> RealmTabContent(state)
+                    ReichTab.ACHIEVEMENTS -> AchievementsTabContent(state)
+                    ReichTab.SYSTEM -> SystemTabContent(state)
+                }
+            }
         }
+
+        VerfallFooterStrip(state = state, onTriggerVerfall = onTriggerVerfall, modifier = Modifier)
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-// Shared: scene banner + progress row
+// Shared: the click-for-gold stage
 // ---------------------------------------------------------------------------------------------
 
 private data class FloatingGoldNumber(val id: Int, val amount: Double)
 
 @Composable
-private fun SceneBanner(
+private fun SceneStage(
     state: GameState,
-    height: Dp,
-    nameFontSize: TextUnit,
-    showChronicle: Boolean,
     modifier: Modifier = Modifier,
+    clickHintFontSize: TextUnit = 11.sp,
+    tipBarWidth: Dp = 280.dp,
 ) {
     val age = state.currentAge
-    val sidePadding = if (showChronicle) 16.dp else 12.dp
-    val bottomPadding = if (showChronicle) 14.dp else 10.dp
 
     val tapScale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
@@ -903,41 +1061,46 @@ private fun SceneBanner(
     }
 
     Box(
-        // Capped, not fillMaxWidth() alone: the age-scene art is a low-res pixel grid (~33x15)
-        // designed around a ~2.2:1 aspect ratio. On a maximized/ultra-wide window the middle
-        // column can get far wider than that, and PixelFit.Cover would then blow individual
-        // pixel blocks up hugely while cropping most of the vertical composition away to fill
-        // it — capping the banner's own width keeps it at a sane, designed crop regardless of
-        // window width, with the surrounding column background framing it instead.
         modifier = modifier
-            // widthIn BEFORE fillMaxWidth, not after: fillMaxWidth first would report a tight,
-            // already-fixed size to its parent that a later widthIn can no longer shrink — the
-            // cap only works as the outer (first) constraint, narrowing what fillMaxWidth then
-            // fills completely.
-            .widthIn(max = 760.dp)
-            .fillMaxWidth()
-            .height(height)
-            .pixelEdgeLine(PixelEdge.Bottom)
+            .background(Color(0xFF0D0A07))
             .clipToBounds()
             .clickable { onTap() },
     ) {
-        // Crossfade, not a direct swap: the age scene art changes shape/palette a lot between
-        // ages (see AgeScene's dawn-brown -> radiant-gold ramp), so an instant cut on age-up
-        // reads as a jarring flash rather than the world visibly aging.
         // Bucketed into 40 steps rather than read as a raw Double: corruption crawls over 25
-        // minutes, so re-rasterizing the full 160x72 grid every second (the tick interval) would
-        // be wasted work for a change too small to see — this redraws only every ~40s of ramp.
+        // minutes, so re-rasterizing the full grid every second (the tick interval) would be
+        // wasted work for a change too small to see — this redraws only every ~40s of ramp.
         val corruptionBucket = (state.corruption * 40).roundToInt()
-        Crossfade(targetState = age.index, animationSpec = tween(600), modifier = Modifier.fillMaxSize()) { index ->
+        Crossfade(
+            targetState = age.index,
+            animationSpec = tween(600),
+            // No forced aspectRatio and no width cap: either one re-introduces letterboxing
+            // against whatever the real stage box happens to be at the current window size, on
+            // top of whatever PixelFit.Contain already does against the art's own aspect below —
+            // independent boxings compounding into a small image floating in a mostly-empty
+            // frame (a max-width cap alone still starves the box's height on a tall/maximized
+            // window, since Contain then pillarboxes the other axis). Filling the actual stage
+            // box and leaving Contain as the sole fit decision keeps the art as large as the
+            // real space allows, however that space is shaped.
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxSize()
+                .border(4.dp, EmberPalette.Shadow),
+        ) { index ->
             PixelArtImage(
                 art = remember(index, corruptionBucket) {
                     val base = ageSceneArt(index, AgeDefinition.all.size)
                     if (corruptionBucket <= 0) base else base.corrupted(corruptionBucket / 40f)
                 },
                 modifier = Modifier.fillMaxSize(),
-                fit = PixelFit.Cover,
+                fit = PixelFit.Contain,
             )
         }
+
+        Box(
+            modifier = Modifier.matchParentSize().background(
+                Brush.radialGradient(0f to EmberGold.copy(alpha = 0.16f), 0.62f to Color.Transparent),
+            ),
+        )
 
         Box(modifier = Modifier.align(Alignment.Center)) {
             floatingNumbers.forEach { number ->
@@ -949,52 +1112,41 @@ private fun SceneBanner(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(if (showChronicle) 96.dp else 64.dp)
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.55f to EmberBackground.copy(alpha = if (showChronicle) 0.8f else 0.82f),
-                        1f to EmberBackground.copy(alpha = 0.97f),
-                    ),
-                ),
+                .height(150.dp)
+                .background(Brush.verticalGradient(0f to Color.Transparent, 1f to Color(0xFF0D0A07).copy(alpha = 0.96f))),
         )
 
-        Column(modifier = Modifier.align(Alignment.BottomStart).padding(start = sidePadding, bottom = bottomPadding).widthIn(max = 560.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Box(modifier = Modifier.pixelFrame(fill = EmberBackground.copy(alpha = 0.85f), borderWidth = 2.dp)) {
-                    Text(
-                        "${age.index + 1}/${AgeDefinition.all.size}",
-                        color = EmberGold,
-                        fontSize = 9.sp,
-                        fontFamily = pixelFontFamily(),
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                    )
-                }
-                Text(
-                    stringResource(age.nameRes),
-                    color = EmberGoldBright,
-                    fontSize = nameFontSize,
-                    fontFamily = pixelFontFamily(),
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-            if (showChronicle) {
-                Text(
-                    stringResource(age.chronicleRes),
-                    color = EmberGold.copy(alpha = 0.7f),
-                    fontSize = 12.sp,
-                    fontStyle = FontStyle.Italic,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            }
+        val pulse = rememberInfiniteTransition(label = "clickHintPulse")
+        val pulseAlpha by pulse.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(animation = tween(1900), repeatMode = RepeatMode.Reverse),
+            label = "clickHintAlpha",
+        )
+        Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                stringResource(Res.string.click_for_gold_label),
+                color = EmberGold,
+                fontSize = clickHintFontSize,
+                fontFamily = pixelFontFamily(),
+                letterSpacing = 0.14f.em,
+                modifier = Modifier.alpha(pulseAlpha),
+            )
+            PixelSegmentedBar(
+                progress = 0f,
+                segments = 16,
+                filledColor = EmberAccent,
+                emptyColor = Color(0xFF1F1811),
+                modifier = Modifier.padding(top = 11.dp).width(tipBarWidth).height(8.dp),
+            )
         }
 
         // Drachenüberflug: a tappable sighting that appears briefly and, if tapped in time,
         // activates a timed production buff. Its own clickable consumes the tap so it doesn't
         // also fall through to the click-for-gold handler on the Box below it.
         if (state.dragonAvailableTicksRemaining > 0) {
-            val pulse = rememberInfiniteTransition(label = "dragonPulse")
-            val pulseScale by pulse.animateFloat(
+            val dragonPulse = rememberInfiniteTransition(label = "dragonPulse")
+            val dragonPulseScale by dragonPulse.animateFloat(
                 initialValue = 0.9f,
                 targetValue = 1.08f,
                 animationSpec = infiniteRepeatable(animation = tween(500), repeatMode = RepeatMode.Reverse),
@@ -1005,7 +1157,7 @@ private fun SceneBanner(
                     .align(Alignment.TopEnd)
                     .padding(10.dp)
                     .size(40.dp)
-                    .scale(pulseScale)
+                    .scale(dragonPulseScale)
                     .pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)
                     .clickable { AppGraph.engine.tapDragonEvent() },
                 contentAlignment = Alignment.Center,
@@ -1019,8 +1171,8 @@ private fun SceneBanner(
         // corruption is building, and its effect is a coin flip (short buff OR short malus) rather
         // than always positive — placed at the opposite corner so the two never overlap.
         if (state.omenAvailableTicksRemaining > 0) {
-            val pulse = rememberInfiniteTransition(label = "omenPulse")
-            val pulseScale by pulse.animateFloat(
+            val omenPulse = rememberInfiniteTransition(label = "omenPulse")
+            val omenPulseScale by omenPulse.animateFloat(
                 initialValue = 0.9f,
                 targetValue = 1.08f,
                 animationSpec = infiniteRepeatable(animation = tween(500), repeatMode = RepeatMode.Reverse),
@@ -1031,7 +1183,7 @@ private fun SceneBanner(
                     .align(Alignment.TopStart)
                     .padding(10.dp)
                     .size(40.dp)
-                    .scale(pulseScale)
+                    .scale(omenPulseScale)
                     .pixelFrame(fill = EmberPanel, bevelLight = Ramps.CorruptionLight)
                     .clickable { AppGraph.engine.tapOmenEvent() },
                 contentAlignment = Alignment.Center,
@@ -1061,155 +1213,73 @@ private fun FloatingGoldNumberText(number: FloatingGoldNumber, onFinished: () ->
     )
 }
 
-@Composable
-private fun ProgressRow(state: GameState, horizontalPadding: Dp, verticalPadding: Dp, showAbsoluteValues: Boolean) {
-    val next = state.nextAge ?: return
-    val progress = (state.lifetimeGold / next.lifetimeGoldThreshold).toFloat().coerceIn(0f, 1f)
-    val labelFontSize = if (showAbsoluteValues) 12.sp else 11.sp
+// ---------------------------------------------------------------------------------------------
+// Buildings (flat list, shared between phone and the desktop Reich column)
+// ---------------------------------------------------------------------------------------------
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(EmberHeaderBar)
-            .pixelEdgeLine(PixelEdge.Bottom)
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            // weight(1f) + maxLines=1/ellipsis: an unweighted wrapping Row here would claim the
-            // full row width on a long age name or large numbers, leaving nothing for the "%"
-            // that follows — the same trap fixed above in the Dynasty row and the switch row.
-            Row(modifier = Modifier.weight(1f)) {
-                Text("${stringResource(Res.string.next_age_label)} · ", color = EmberDim, fontSize = labelFontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(stringResource(next.nameRes), color = EmberGold, fontSize = labelFontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (showAbsoluteValues) {
-                    Text(
-                        " · ${formatAmount(state.lifetimeGold)} / ${formatAmount(next.lifetimeGoldThreshold)}",
-                        color = EmberDim,
-                        fontSize = labelFontSize,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            Text(
-                "${(progress * 100).toInt()}%",
-                color = EmberGold,
-                fontSize = 10.sp,
-                fontFamily = pixelFontFamily(),
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        PixelSegmentedBar(progress = progress, segments = 20, modifier = Modifier.fillMaxWidth().height(10.dp))
-    }
+/** Full Holdings block (fixed header + list) — used as-is on phone, where the whole destination
+ * is already one scrollable column. Desktop's [ReichColumn] instead calls [BuildingsHeader] and
+ * [BuildingsList] separately, so only the list scrolls alongside the Reich tabs below it and the
+ * fixed header/footer never get pushed off-screen by a long building list. */
+@Composable
+private fun BuildingsSection(state: GameState, multiplier: BuyMultiplier, onMultiplierChange: (BuyMultiplier) -> Unit, compact: Boolean) {
+    BuildingsHeader(multiplier = multiplier, onMultiplierChange = onMultiplierChange, compact = compact)
+    BuildingsList(state = state, multiplier = multiplier, compact = compact)
 }
 
-// ---------------------------------------------------------------------------------------------
-// Buildings (shared between the phone single-column list and the desktop 2-col grid)
-// ---------------------------------------------------------------------------------------------
-
 @Composable
-private fun BuildingsSection(state: GameState, multiplier: BuyMultiplier, onMultiplierChange: (BuyMultiplier) -> Unit, columns: Int) {
-    var lockedExpanded by remember { mutableStateOf(false) }
-    val unlocked = remember(state) { BuildingDefinition.all.filter { isBuildingUnlocked(it, state) } }
-    val locked = remember(state) { BuildingDefinition.all.filter { !isBuildingUnlocked(it, state) } }
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+private fun BuildingsHeader(multiplier: BuyMultiplier, onMultiplierChange: (BuyMultiplier) -> Unit, compact: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .pixelEdgeLine(PixelEdge.Bottom)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             stringResource(Res.string.buildings_title).uppercase(),
             color = EmberGold,
-            fontSize = 11.sp,
+            fontSize = if (compact) 10.sp else 11.sp,
             fontFamily = pixelFontFamily(),
-            letterSpacing = 0.04f.em,
+            letterSpacing = 0.1f.em,
         )
-        BuyMultiplierChips(selected = multiplier, onSelect = onMultiplierChange)
-    }
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    if (columns == 1) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            unlocked.forEach { definition -> BuildingRow(state, definition, multiplier) }
-        }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            unlocked.chunked(columns).forEach { rowDefs ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    rowDefs.forEach { definition -> Box(modifier = Modifier.weight(1f)) { BuildingRow(state, definition, multiplier) } }
-                    repeat(columns - rowDefs.size) { Spacer(modifier = Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
-
-    if (locked.isNotEmpty()) {
-        if (columns == 1) {
-            val nearest = locked.minByOrNull { it.unlockAgeIndex }
-            if (!lockedExpanded) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .pixelFrame(fill = EmberHeaderBar, raised = false)
-                        .clickable { lockedExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(Res.string.locked_group_label, locked.size), color = EmberDim, fontSize = 12.sp, fontStyle = FontStyle.Italic)
-                    if (nearest != null) {
-                        val nearestAgeName = stringResource(AgeDefinition.all[nearest.unlockAgeIndex].nameRes)
-                        Text("${stringResource(Res.string.locked_group_from, nearestAgeName)} ›", color = EmberGold, fontSize = 11.sp)
-                    }
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .clickable { lockedExpanded = false },
-                    verticalArrangement = Arrangement.spacedBy(1.dp),
-                ) {
-                    locked.forEach { definition -> LockedBuildingRow(definition) }
-                }
-            }
-        } else {
-            Text(
-                stringResource(Res.string.locked_section_title).uppercase(),
-                color = EmberDim,
-                fontSize = 9.sp,
-                fontFamily = pixelFontFamily(),
-                letterSpacing = 0.08f.em,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
-                locked.chunked(2).forEach { rowDefs ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                        rowDefs.forEach { definition -> Box(modifier = Modifier.weight(1f)) { LockedBuildingRow(definition) } }
-                        repeat(2 - rowDefs.size) { Spacer(modifier = Modifier.weight(1f)) }
-                    }
-                }
-            }
-        }
+        BuyMultiplierChips(selected = multiplier, onSelect = onMultiplierChange, compact = compact)
     }
 }
 
 @Composable
-private fun BuyMultiplierChips(selected: BuyMultiplier, onSelect: (BuyMultiplier) -> Unit) {
+private fun BuildingsList(state: GameState, multiplier: BuyMultiplier, compact: Boolean) {
+    val unlocked = remember(state) { BuildingDefinition.all.filter { isBuildingUnlocked(it, state) } }
+    val locked = remember(state) { BuildingDefinition.all.filter { !isBuildingUnlocked(it, state) } }
+
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        unlocked.forEach { definition -> BuildingRow(state, definition, multiplier, compact) }
+        locked.forEach { definition -> LockedBuildingRow(definition, compact) }
+    }
+}
+
+@Composable
+private fun BuyMultiplierChips(selected: BuyMultiplier, onSelect: (BuyMultiplier) -> Unit, compact: Boolean = false) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         BuyMultiplier.entries.forEach { option ->
             val isSelected = option == selected
             Box(
                 modifier = Modifier
-                    .pixelFrame(
-                        fill = if (isSelected) EmberAccent else EmberPanel,
-                        borderWidth = 2.dp,
-                        bevelLight = if (isSelected) EmberAccentBright else EmberPalette.BevelLight,
-                    )
+                    .background(if (isSelected) EmberAccent else EmberPanel)
                     .clickable { onSelect(option) }
-                    .padding(horizontal = 9.dp, vertical = 6.dp),
+                    .padding(horizontal = if (compact) 7.dp else 9.dp, vertical = 5.dp),
             ) {
-                Text(option.label, color = if (isSelected) EmberWhite else EmberGold.copy(alpha = 0.8f), fontSize = 10.sp, fontFamily = pixelFontFamily())
+                Text(
+                    option.label,
+                    color = if (isSelected) EmberWhite else EmberGold.copy(alpha = 0.75f),
+                    fontSize = if (compact) 8.sp else 9.sp,
+                    fontFamily = pixelFontFamily(),
+                )
             }
         }
     }
@@ -1278,26 +1348,34 @@ private fun VolumeBar(volume: Float, onVolumeChange: (Float) -> Unit, modifier: 
 }
 
 @Composable
-private fun BuildingRow(state: GameState, definition: BuildingDefinition, multiplier: BuyMultiplier) {
+private fun ThinProgressTrack(progress: Float, filledColor: Color, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.background(EmberPalette.Panel)) {
+        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(progress.coerceIn(0f, 1f)).background(filledColor))
+    }
+}
+
+@Composable
+private fun BuildingRow(state: GameState, definition: BuildingDefinition, multiplier: BuyMultiplier, compact: Boolean) {
     val level = state.buildingLevel(definition.id)
     val quantity = multiplier.quantity ?: maxAffordableQuantity(definition, level, state.gold, state)
     val cost = bulkBuildingCost(definition, level, quantity.coerceAtLeast(1), state)
     val canAfford = quantity > 0 && state.gold >= cost
+    val nextMilestone = remember(level) { MILESTONE_LEVELS.firstOrNull { it > level } }
+    val milestoneProgress = remember(level, nextMilestone) {
+        if (nextMilestone == null) 1f else {
+            val prevMilestone = MILESTONE_LEVELS.lastOrNull { it <= level } ?: 0
+            val span = (nextMilestone - prevMilestone).coerceAtLeast(1)
+            ((level - prevMilestone).toFloat() / span).coerceIn(0f, 1f)
+        }
+    }
 
     val shakeX = remember { Animatable(0f) }
     val flash = remember { Animatable(0f) }
-    val iconPop = remember { Animatable(1f) }
     LaunchedEffect(definition.id) {
         AppGraph.engine.events.collect { event ->
             when {
                 event is GameEvent.PurchaseSucceeded && event.buildingId == definition.id -> {
                     flash.snapTo(1f)
-                    // Concurrent, not sequential: the icon pop should play alongside the button
-                    // flash below, not wait for its 300ms animateTo to finish first.
-                    launch {
-                        iconPop.snapTo(1.25f)
-                        iconPop.animateTo(1f, animationSpec = tween(200))
-                    }
                     flash.animateTo(0f, animationSpec = tween(300))
                 }
                 event is GameEvent.PurchaseDenied && event.buildingId == definition.id -> {
@@ -1306,116 +1384,113 @@ private fun BuildingRow(state: GameState, definition: BuildingDefinition, multip
                     shakeX.animateTo(-8f, tween(80))
                     shakeX.animateTo(0f, tween(60))
                 }
-                event is GameEvent.BuildingMilestoneReached && event.buildingId == definition.id -> {
-                    // Reuses the purchase flash/pop but bigger — a milestone crossing is a
-                    // purchase that also doubled the building's output, not a separate moment.
-                    launch {
-                        iconPop.snapTo(1.5f)
-                        iconPop.animateTo(1f, animationSpec = tween(320))
-                    }
-                }
+                else -> {}
             }
         }
     }
 
-    val nextMilestone = remember(level) { MILESTONE_LEVELS.firstOrNull { it > level } }
-    val levelsById = remember(state) { state.buildings.associate { it.id to it.level } }
-    val incomingSynergies = remember(definition.id, levelsById) {
-        SynergyDefinition.forTarget(definition.id).filter { (levelsById[it.sourceId] ?: 0) > 0 }
-    }
+    val marker = if (canAfford) EmberGold else if (level > 0) EmberPalette.BevelLight else EmberPalette.Panel
+    val rowHeight = if (compact) 40.dp else 48.dp
 
     Row(
-        modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).pixelFrame().padding(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(x = shakeX.value.dp)
+            .background(lerp(Color.Transparent, EmberPalette.White.copy(alpha = 0.14f), flash.value))
+            .clickable { AppGraph.engine.buy(definition.id, multiplier.quantity) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val icon = remember(definition.id) { buildingIcon(definition.id) }
-        if (icon != null) PixelArtImage(icon, modifier = Modifier.size(36.dp).scale(iconPop.value))
-        Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.width(3.dp).height(rowHeight).background(marker))
+        if (!compact) {
+            Text(
+                "×$level",
+                color = if (level > 0) EmberGold else LockedTextColor,
+                fontSize = 11.sp,
+                fontFamily = pixelFontFamily(),
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 12.dp).width(34.dp),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = if (compact) 10.dp else 12.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(definition.nameRes),
-                    color = EmberGold,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
+                    if (compact) "$level ${stringResource(definition.nameRes)}" else stringResource(definition.nameRes),
+                    color = if (level > 0) EmberGoldBright else EmberDim,
+                    fontSize = if (compact) 11.sp else 12.sp,
+                    fontFamily = pixelFontFamily(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Box(
-                    modifier = Modifier
-                        .padding(start = 6.dp)
-                        .background(EmberPanelLight)
-                        .border(1.dp, EmberPalette.Shadow)
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                ) {
-                    Text("×$level", color = EmberGoldBright, fontSize = 9.sp, fontFamily = pixelFontFamily())
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    formatAmount(cost),
+                    color = if (canAfford) EmberGold else EmberDim,
+                    fontSize = if (compact) 10.sp else 11.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                )
+            }
+            if (compact) {
+                ThinProgressTrack(
+                    progress = milestoneProgress,
+                    filledColor = if (canAfford) EmberGold else EmberAccent,
+                    modifier = Modifier.fillMaxWidth().padding(top = 7.dp).height(3.dp),
+                )
+            } else {
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ThinProgressTrack(
+                        progress = milestoneProgress,
+                        filledColor = if (canAfford) EmberGold else EmberAccent,
+                        modifier = Modifier.weight(1f).height(3.dp),
+                    )
+                    Text(
+                        "${(milestoneProgress * 100).toInt()}%",
+                        color = EmberDim,
+                        fontSize = 9.sp,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.padding(start = 10.dp).width(52.dp),
+                    )
                 }
             }
-            Text("${formatAmount(buildingProduction(definition, level, state))}/s", color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
-            if (nextMilestone != null) {
-                Text(
-                    stringResource(Res.string.milestone_hint_label, nextMilestone, formatAmount(milestoneMultiplier(nextMilestone))),
-                    color = EmberDim.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 1.dp),
-                )
-            }
-            incomingSynergies.forEach { synergy ->
-                val sourceLevel = levelsById[synergy.sourceId] ?: 0
-                val bonusPct = (synergy.bonusPerLevel * sourceLevel).coerceAtMost(synergy.cap) * 100.0
-                Text(
-                    stringResource(Res.string.building_synergy_hint, formatAmount(bonusPct), stringResource(BuildingDefinition.byId(synergy.sourceId).nameRes)),
-                    color = EmberDim.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 1.dp),
-                )
-            }
-        }
-        Column(
-            modifier = Modifier
-                .height(44.dp)
-                .widthIn(min = 104.dp)
-                .pixelFrame(
-                    fill = lerp(if (canAfford) EmberAccent else EmberPanel, EmberWhite, flash.value),
-                    bevelLight = if (canAfford) EmberAccentBright else EmberPanelLight,
-                )
-                // Always enabled, not enabled = canAfford: a disabled clickable never invokes
-                // onClick, so an unaffordable tap needs to reach the engine for it to emit a
-                // PurchaseDenied event (deny sound/shake). The button's affordability styling
-                // (fill/text color above) is unaffected by this.
-                .clickable { AppGraph.engine.buy(definition.id, multiplier.quantity) }
-                .padding(horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                stringResource(Res.string.buy_multiplier_label).uppercase(),
-                color = if (canAfford) EmberWhite.copy(alpha = 0.7f) else EmberDim,
-                fontSize = 9.sp,
-                letterSpacing = 0.06f.em,
-            )
-            Text(formatAmount(cost), color = if (canAfford) EmberGoldBright else EmberDim, fontSize = 11.sp, fontFamily = pixelFontFamily())
         }
     }
 }
 
 @Composable
-private fun LockedBuildingRow(definition: BuildingDefinition) {
-    Row(
-        modifier = Modifier.fillMaxWidth().background(EmberHeaderBar).padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val icon = remember(definition.id) { buildingIcon(definition.id) }
-        if (icon != null) PixelArtImage(icon, modifier = Modifier.size(26.dp).alpha(0.35f))
-        Text(
-            stringResource(definition.nameRes),
-            color = EmberDim,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(start = 10.dp),
-        )
-        Text(stringResource(AgeDefinition.all[definition.unlockAgeIndex].nameRes), color = LockedTextColor, fontSize = 10.sp, fontStyle = FontStyle.Italic)
+private fun LockedBuildingRow(definition: BuildingDefinition, compact: Boolean) {
+    val rowHeight = if (compact) 40.dp else 48.dp
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.width(3.dp).height(rowHeight).background(EmberPalette.Panel))
+        if (!compact) Box(modifier = Modifier.width(46.dp))
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = if (compact) 10.dp else 0.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(definition.nameRes),
+                color = LockedTextColor,
+                fontSize = if (compact) 11.sp else 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                stringResource(AgeDefinition.all[definition.unlockAgeIndex].nameRes),
+                color = LockedTextColor,
+                fontSize = 10.sp,
+                fontStyle = FontStyle.Italic,
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -1423,121 +1498,178 @@ private fun LockedBuildingRow(definition: BuildingDefinition) {
 // Reich cards (Verfall / Akademie / Dynastie / Erfolge / Regeln & System)
 // ---------------------------------------------------------------------------------------------
 
-@Composable
-private fun VerfallCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(Res.string.verfall_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-            Text(stringResource(Res.string.verfall_survived_short, state.verfallCount), color = EmberDim, fontSize = 11.sp)
-        }
-        Text(
-            stringResource(Res.string.verfall_description),
-            color = EmberGold.copy(alpha = 0.65f),
-            fontSize = 12.sp,
-            fontStyle = FontStyle.Italic,
-            modifier = Modifier.padding(top = 6.dp),
-        )
+private fun Modifier.reichCardShell(shakeX: Float = 0f, flash: Float = 0f): Modifier = this
+    .fillMaxWidth()
+    .offset(x = shakeX.dp)
+    .background(lerp(EmberBackground, EmberPalette.White, flash))
+    .border(2.dp, EmberPalette.Panel)
+    .padding(horizontal = 14.dp, vertical = 12.dp)
 
-        val canTrigger = state.lifetimeGold >= MIN_LIFETIME_GOLD_FOR_VERFALL
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            PixelButton(
-                onClick = { AppGraph.engine.triggerVerfall() },
-                enabled = canTrigger,
-                bevelLight = EmberAccentBright,
-                modifier = Modifier.weight(1f).height(44.dp),
-            ) {
-                Text(stringResource(Res.string.verfall_button), fontFamily = pixelFontFamily(), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (canTrigger) {
-                Column(modifier = Modifier.padding(start = 8.dp), horizontalAlignment = Alignment.End) {
-                    Text(stringResource(Res.string.reward_yield_label), color = EmberDim, fontSize = 10.sp)
-                    Text(formatAmount(chroniclePointsForVerfall(state)), color = EmberGoldBright, fontSize = 13.sp, fontFamily = pixelFontFamily())
-                }
-            } else {
+/** The single card shape reused by every Reich-tab entry: dot+title left, meta right, a
+ * description line, then a [footer] slot (buy bar+button, a plain label, or nothing). */
+@Composable
+private fun ReichCardBlock(
+    title: String,
+    meta: String?,
+    description: String,
+    modifier: Modifier = Modifier,
+    dotColor: Color = EmberGold,
+    shakeX: Float = 0f,
+    flash: Float = 0f,
+    footer: @Composable () -> Unit = {},
+) {
+    Column(modifier = modifier.reichCardShell(shakeX = shakeX, flash = flash)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f, fill = false)) {
+                Box(modifier = Modifier.size(9.dp).background(dotColor))
                 Text(
-                    stringResource(Res.string.verfall_locked_hint, formatAmount(MIN_LIFETIME_GOLD_FOR_VERFALL)),
-                    color = EmberDim,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(start = 8.dp).weight(1f),
+                    title,
+                    color = EmberGold,
+                    fontSize = 11.sp,
+                    fontFamily = pixelFontFamily(),
+                    letterSpacing = 0.06f.em,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 9.dp),
                 )
             }
-        }
-
-        if (canTrigger && state.corruption > 0.0) {
-            Column(modifier = Modifier.padding(top = 10.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(Res.string.verfall_corruption_label), color = EmberDim, fontSize = 10.sp)
-                    Text("${(state.corruption * 100).roundToInt()}%", color = EmberAccentBright, fontSize = 10.sp, fontFamily = pixelFontFamily())
-                }
-                PixelSegmentedBar(
-                    progress = state.corruption.toFloat(),
-                    segments = 20,
-                    filledColor = EmberAccentBright,
-                    modifier = Modifier.fillMaxWidth().height(10.dp).padding(top = 4.dp),
-                )
+            if (meta != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                Text(meta, color = EmberDim, fontSize = 10.sp, fontFamily = pixelFontFamily(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+        Text(description, color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), lineHeight = 1.8.em, modifier = Modifier.padding(top = 9.dp))
+        Box(modifier = Modifier.padding(top = 11.dp)) { footer() }
     }
 }
 
 @Composable
-private fun AcademyCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(Res.string.academy_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-            Text(
-                stringResource(Res.string.academy_level_label, state.academyLevel, formatAmount((academyMultiplier(state) - 1.0) * 100.0)),
-                color = EmberGoldBright,
-                fontSize = 12.sp,
-            )
-        }
-
-        val cost = academyUpgradeCost(state.academyLevel)
-        val affordable = state.chroniclePoints >= cost
-        val shakeX = remember { Animatable(0f) }
-        val flash = remember { Animatable(0f) }
-        LaunchedEffect(Unit) {
-            AppGraph.engine.events.collect { event ->
-                when (event) {
-                    GameEvent.AcademyStudySucceeded -> {
-                        flash.snapTo(1f)
-                        flash.animateTo(0f, animationSpec = tween(300))
-                    }
-                    GameEvent.AcademyStudyDenied -> {
-                        shakeX.snapTo(0f)
-                        shakeX.animateTo(8f, tween(40))
-                        shakeX.animateTo(-8f, tween(80))
-                        shakeX.animateTo(0f, tween(60))
-                    }
-                    else -> {}
-                }
-            }
-        }
-        Row(
+private fun ReichCardBuyFooter(progress: Float, buttonLabel: String, buttonEnabled: Boolean, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        PixelSegmentedBar(
+            progress = progress,
+            segments = 14,
+            filledColor = EmberGold,
+            emptyColor = EmberPalette.Panel,
+            modifier = Modifier.weight(1f).height(8.dp),
+        )
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp)
-                .height(44.dp)
-                .offset(x = shakeX.value.dp)
-                .pixelFrame(fill = lerp(EmberPanelLight, EmberWhite, flash.value))
-                // Always enabled — see the equivalent comment on BuildingRow's buy click.
-                .clickable { AppGraph.engine.buyAcademyUpgrade() }
-                .padding(horizontal = 12.dp)
-                .alpha(if (affordable) 1f else 0.5f),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(start = 12.dp)
+                .pixelFrame(
+                    fill = if (buttonEnabled) EmberAccent else EmberPanel,
+                    bevelLight = if (buttonEnabled) EmberAccentBright else EmberPalette.BevelLight,
+                )
+                // Always enabled — see the equivalent comment on BuildingRow's buy click: the
+                // engine itself decides eligibility and fires the deny event for shake feedback.
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
         ) {
-            Text(stringResource(Res.string.academy_study_button), color = EmberGold, fontSize = 11.sp, fontFamily = pixelFontFamily())
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PixelArtImage(remember { chroniclePointsIcon() }, modifier = Modifier.size(16.dp))
-                Text(formatAmount(cost), color = EmberGoldBright, fontSize = 11.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 5.dp))
-            }
+            Text(buttonLabel, color = if (buttonEnabled) EmberWhite else EmberGold, fontSize = 9.sp, fontFamily = pixelFontFamily(), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
+/** REICH tab: currency grid, Blight explainer, then one card per system (Akademie, Dynastie,
+ * Ratssaal, Wunder, Aufträge, Erbe) — all sharing [ReichCardBlock]'s visual pattern. */
 @Composable
-private fun DynastyCard(state: GameState) {
+private fun RealmTabContent(state: GameState) {
+    Text(stringResource(Res.string.currencies_label), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.1f.em)
+    Spacer(modifier = Modifier.height(10.dp))
+
+    val cells = remember(state) {
+        listOf(
+            CurrencyCellData(formatAmount(state.chroniclePoints), Res.string.currency_abbr_chronicle, Ramps.PaperLight, ringHighlight = true),
+            CurrencyCellData(formatAmount(state.sagen), Res.string.currency_abbr_legends, Ramps.ArcaneLight, ringHighlight = false),
+            CurrencyCellData(formatAmount(state.einfluss), Res.string.currency_abbr_influence, Ramps.ClothLight, ringHighlight = false),
+            CurrencyCellData("${state.unlockedAchievements.size}/${AchievementDefinition.all.size}", Res.string.currency_abbr_achievements, EmberGold, ringHighlight = false),
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        cells.forEach { cell ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(EmberBackground)
+                    .border(2.dp, if (cell.ringHighlight) EmberPalette.BevelLight else EmberPalette.Panel)
+                    .padding(horizontal = 10.dp, vertical = 11.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(modifier = Modifier.size(9.dp).background(cell.dot))
+                Text(
+                    cell.value,
+                    color = EmberGoldBright,
+                    fontSize = 13.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 9.dp),
+                )
+                Text(stringResource(cell.abbrRes), color = EmberDim, fontSize = 8.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.08f.em, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+    }
+
+    Text(
+        stringResource(Res.string.verfall_description),
+        color = EmberDim,
+        fontSize = 10.sp,
+        fontFamily = pixelFontFamily(),
+        lineHeight = 1.8.em,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+
+    Column(modifier = Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AcademyReichCard(state)
+        DynastyReichCard(state)
+        RatssaalReichCard(state)
+        WonderDefinition.all.forEach { wonder -> WonderReichCard(state, wonder) }
+        QuestsReichCards(state)
+        HeirReichCard(state)
+    }
+}
+
+@Composable
+private fun AcademyReichCard(state: GameState) {
+    val cost = academyUpgradeCost(state.academyLevel)
+    val affordable = state.chroniclePoints >= cost
+    val shakeX = remember { Animatable(0f) }
+    val flash = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        AppGraph.engine.events.collect { event ->
+            when (event) {
+                GameEvent.AcademyStudySucceeded -> {
+                    flash.snapTo(1f)
+                    flash.animateTo(0f, animationSpec = tween(300))
+                }
+                GameEvent.AcademyStudyDenied -> {
+                    shakeX.snapTo(0f)
+                    shakeX.animateTo(8f, tween(40))
+                    shakeX.animateTo(-8f, tween(80))
+                    shakeX.animateTo(0f, tween(60))
+                }
+                else -> {}
+            }
+        }
+    }
+    ReichCardBlock(
+        title = stringResource(Res.string.academy_title).uppercase(),
+        meta = stringResource(Res.string.academy_level_label, state.academyLevel, formatAmount((academyMultiplier(state) - 1.0) * 100.0)),
+        description = stringResource(Res.string.academy_card_description),
+        shakeX = shakeX.value,
+        flash = flash.value,
+    ) {
+        ReichCardBuyFooter(
+            progress = (state.chroniclePoints / cost).toFloat().coerceIn(0f, 1f),
+            buttonLabel = stringResource(Res.string.academy_study_button).uppercase(),
+            buttonEnabled = affordable,
+            onClick = { AppGraph.engine.buyAcademyUpgrade() },
+        )
+    }
+}
+
+@Composable
+private fun DynastyReichCard(state: GameState) {
     // Ticks once a second purely to recompute the switch cooldown countdown below — the rest of
     // the card only depends on `state`, which already recomposes on its own.
     var now by remember { mutableStateOf(nowEpochSeconds()) }
@@ -1559,13 +1691,27 @@ private fun DynastyCard(state: GameState) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).pixelFrame().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(Res.string.dynasty_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+    Column(modifier = Modifier.reichCardShell(shakeX = shakeX.value)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f, fill = false)) {
+                Box(modifier = Modifier.size(9.dp).background(EmberGold))
+                Text(
+                    stringResource(Res.string.dynasty_title).uppercase(),
+                    color = EmberGold,
+                    fontSize = 11.sp,
+                    fontFamily = pixelFontFamily(),
+                    letterSpacing = 0.06f.em,
+                    modifier = Modifier.padding(start = 9.dp),
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
             Text(
                 if (cooldownRemaining > 0) stringResource(Res.string.dynasty_switch_cooldown_hint, formatCooldown(cooldownRemaining)) else stringResource(Res.string.dynasty_switch_hint),
                 color = EmberDim,
-                fontSize = 11.sp,
+                fontSize = 9.sp,
+                fontFamily = pixelFontFamily(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -1586,67 +1732,160 @@ private fun DynastyCard(state: GameState) {
                     PixelButton(
                         onClick = { AppGraph.engine.triggerWiedergeburt() },
                         bevelLight = EmberAccentBright,
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier.weight(1f).height(40.dp),
                     ) {
-                        Text(stringResource(Res.string.wiedergeburt_button), fontFamily = pixelFontFamily(), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(Res.string.wiedergeburt_button), fontFamily = pixelFontFamily(), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Column(modifier = Modifier.padding(start = 8.dp), horizontalAlignment = Alignment.End) {
-                        Text(stringResource(Res.string.reward_yield_label), color = EmberDim, fontSize = 10.sp)
+                        Text(stringResource(Res.string.reward_yield_label), color = EmberDim, fontSize = 9.sp)
                         Text(
                             formatAmount(sagenForWiedergeburt(state.lifetimeChroniclePoints)),
                             color = EmberGoldBright,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontFamily = pixelFontFamily(),
                         )
                     }
                 }
             } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(Res.string.wiedergeburt_title), color = EmberDim, fontSize = 12.sp)
-                    Text(
-                        stringResource(Res.string.wiedergeburt_locked_hint, MIN_VERFALL_COUNT_FOR_WIEDERGEBURT, state.verfallCount),
-                        color = LockedTextColor,
-                        fontSize = 11.sp,
-                        fontStyle = FontStyle.Italic,
-                    )
-                }
+                Text(
+                    stringResource(Res.string.wiedergeburt_locked_hint, MIN_VERFALL_COUNT_FOR_WIEDERGEBURT, state.verfallCount),
+                    color = LockedTextColor,
+                    fontSize = 9.sp,
+                    fontFamily = pixelFontFamily(),
+                    fontStyle = FontStyle.Italic,
+                    lineHeight = 1.6.em,
+                )
             }
         }
     }
 }
 
-/** A small heraldic block naming the current life's Heir — rolled fresh at each Wiedergeburt. */
 @Composable
-private fun HeirCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Text(stringResource(Res.string.heir_card_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-        val heirId = state.currentHeirId
-        if (heirId == null) {
-            Text(
-                stringResource(Res.string.heir_none_hint),
-                color = EmberDim,
-                fontSize = 11.sp,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        } else {
-            val trait = HeirTraitDefinition.byId(heirId)
-            Row(modifier = Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                PixelArtImage(
-                    art = remember(heirId) { heirEmblemIcon(trait.effectType) },
-                    modifier = Modifier.size(32.dp),
+private fun RatssaalReichCard(state: GameState) {
+    Column(modifier = Modifier.reichCardShell()) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f, fill = false)) {
+                Box(modifier = Modifier.size(9.dp).background(EmberGold))
+                Text(
+                    stringResource(Res.string.ratssaal_title).uppercase(),
+                    color = EmberGold,
+                    fontSize = 11.sp,
+                    fontFamily = pixelFontFamily(),
+                    letterSpacing = 0.06f.em,
+                    modifier = Modifier.padding(start = 9.dp),
                 )
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    Text(
-                        stringResource(Res.string.heir_name_and_trait, state.currentHeirName, stringResource(trait.nameRes)),
-                        color = EmberGoldBright,
-                        fontSize = 13.sp,
-                        fontFamily = pixelFontFamily(),
-                    )
-                    Text(stringResource(trait.descriptionRes), color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text("${state.ratssaalUpgrades.size}/${RatssaalUpgradeDefinition.all.size}", color = EmberDim, fontSize = 10.sp, fontFamily = pixelFontFamily())
+        }
+        Text(
+            stringResource(Res.string.ratssaal_card_description),
+            color = EmberDim,
+            fontSize = 9.sp,
+            fontFamily = pixelFontFamily(),
+            lineHeight = 1.8.em,
+            modifier = Modifier.padding(top = 9.dp),
+        )
+        Column(modifier = Modifier.padding(top = 11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            RatssaalUpgradeDefinition.all.forEach { upgrade -> RatssaalUpgradeRow(state, upgrade) }
+        }
+    }
+}
+
+@Composable
+private fun WonderReichCard(state: GameState, wonder: WonderDefinition) {
+    val owned = wonder.id in state.ownedWonders
+    val unlocked = state.currentAge.index >= wonder.unlockAgeIndex
+    val affordable = state.gold >= wonder.cost
+
+    val shakeX = remember { Animatable(0f) }
+    LaunchedEffect(wonder.id) {
+        AppGraph.engine.events.collect { event ->
+            if (event is GameEvent.WonderBuildDenied && event.id == wonder.id) {
+                shakeX.snapTo(0f)
+                shakeX.animateTo(8f, tween(40))
+                shakeX.animateTo(-8f, tween(80))
+                shakeX.animateTo(0f, tween(60))
             }
         }
+    }
+
+    ReichCardBlock(
+        title = stringResource(wonder.nameRes).uppercase(),
+        meta = when {
+            owned -> stringResource(Res.string.wonder_built_label)
+            !unlocked -> stringResource(AgeDefinition.all[wonder.unlockAgeIndex].nameRes)
+            else -> formatAmount(wonder.cost)
+        },
+        description = stringResource(wonder.descriptionRes),
+        dotColor = if (owned) EmberGoldBright else if (unlocked) EmberGold else EmberPalette.Panel,
+        shakeX = shakeX.value,
+    ) {
+        if (!owned && unlocked) {
+            ReichCardBuyFooter(
+                progress = (state.gold / wonder.cost).toFloat().coerceIn(0f, 1f),
+                buttonLabel = stringResource(Res.string.wonder_build_button, formatAmount(wonder.cost)).uppercase(),
+                buttonEnabled = affordable,
+                onClick = { AppGraph.engine.buyWonder(wonder.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuestsReichCards(state: GameState) {
+    val openQuests = remember(state.claimedQuestIds) { QuestDefinition.all.filter { it.id !in state.claimedQuestIds }.take(3) }
+    if (openQuests.isEmpty()) {
+        Text(
+            stringResource(Res.string.quests_empty_hint),
+            color = EmberDim,
+            fontSize = 9.sp,
+            fontFamily = pixelFontFamily(),
+            fontStyle = FontStyle.Italic,
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            openQuests.forEach { quest -> QuestReichCard(state, quest) }
+        }
+    }
+}
+
+@Composable
+private fun QuestReichCard(state: GameState, quest: QuestDefinition) {
+    val fulfilled = quest.condition(state)
+    ReichCardBlock(
+        title = stringResource(quest.nameRes).uppercase(),
+        meta = null,
+        description = "${stringResource(Res.string.quest_reward_label)}: ${formatAmount(quest.rewardGold)} ${stringResource(Res.string.gold_label)}",
+        dotColor = if (fulfilled) EmberGoldBright else EmberPalette.Panel,
+    ) {
+        ReichCardBuyFooter(
+            progress = if (fulfilled) 1f else 0f,
+            buttonLabel = stringResource(Res.string.quest_claim_button).uppercase(),
+            buttonEnabled = fulfilled,
+            onClick = { AppGraph.engine.claimQuest(quest.id) },
+        )
+    }
+}
+
+/** A small heraldic block naming the current life's Heir — rolled fresh at each Wiedergeburt. */
+@Composable
+private fun HeirReichCard(state: GameState) {
+    val heirId = state.currentHeirId
+    if (heirId == null) {
+        ReichCardBlock(
+            title = stringResource(Res.string.heir_card_title).uppercase(),
+            meta = null,
+            description = stringResource(Res.string.heir_none_hint),
+        )
+    } else {
+        val trait = HeirTraitDefinition.byId(heirId)
+        ReichCardBlock(
+            title = state.currentHeirName.uppercase(),
+            meta = stringResource(trait.nameRes),
+            description = stringResource(trait.descriptionRes),
+            dotColor = EmberGoldBright,
+        )
     }
 }
 
@@ -1727,90 +1966,6 @@ private fun DynastyPathRow(state: GameState, path: DynastyPath, cooldownActive: 
 }
 
 @Composable
-private fun QuestsCard(state: GameState) {
-    val openQuests = remember(state.claimedQuestIds) {
-        QuestDefinition.all.filter { it.id !in state.claimedQuestIds }.take(3)
-    }
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Text(stringResource(Res.string.quests_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-        if (openQuests.isEmpty()) {
-            Text(
-                stringResource(Res.string.quests_empty_hint),
-                color = EmberDim,
-                fontSize = 11.sp,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        } else {
-            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                openQuests.forEach { quest -> QuestRow(state, quest) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuestRow(state: GameState, quest: QuestDefinition) {
-    val fulfilled = quest.condition(state)
-    Row(
-        modifier = Modifier.fillMaxWidth().background(EmberHeaderBar).padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                stringResource(quest.nameRes),
-                color = if (fulfilled) EmberGoldBright else EmberGold.copy(alpha = 0.8f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                "${stringResource(Res.string.quest_reward_label)}: ${formatAmount(quest.rewardGold)} ${stringResource(Res.string.gold_label)}",
-                color = EmberDim,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        Row(
-            modifier = Modifier
-                .height(36.dp)
-                .pixelFrame(
-                    fill = if (fulfilled) EmberAccent else EmberAccent.copy(alpha = 0.35f),
-                    bevelLight = EmberAccentBright,
-                )
-                // Always enabled — the engine decides eligibility, matching the rest of the UI.
-                .clickable { AppGraph.engine.claimQuest(quest.id) }
-                .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(Res.string.quest_claim_button), color = EmberWhite, fontSize = 10.sp, fontFamily = pixelFontFamily())
-        }
-    }
-}
-
-@Composable
-private fun RatssaalCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(Res.string.ratssaal_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-            IconValueLabel(
-                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
-                iconSize = 14.dp,
-                value = formatAmount(state.einfluss),
-                valueColor = EmberGoldBright,
-                valueFontSize = 11.sp,
-                label = stringResource(Res.string.einfluss_label),
-                labelFontSize = 10.sp,
-            )
-        }
-        Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            RatssaalUpgradeDefinition.all.forEach { upgrade -> RatssaalUpgradeRow(state, upgrade) }
-        }
-    }
-}
-
-@Composable
 private fun RatssaalUpgradeRow(state: GameState, upgrade: RatssaalUpgradeDefinition) {
     val owned = upgrade.id in state.ratssaalUpgrades
     val affordable = state.einfluss >= upgrade.cost
@@ -1873,111 +2028,6 @@ private fun RatssaalUpgradeRow(state: GameState, upgrade: RatssaalUpgradeDefinit
     }
 }
 
-@Composable
-private fun WondersCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Text(stringResource(Res.string.wonders_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-        Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            WonderDefinition.all.forEach { wonder -> WonderRow(state, wonder) }
-        }
-    }
-}
-
-@Composable
-private fun WonderRow(state: GameState, wonder: WonderDefinition) {
-    val owned = wonder.id in state.ownedWonders
-    val unlocked = state.currentAge.index >= wonder.unlockAgeIndex
-    val affordable = state.gold >= wonder.cost
-
-    val shakeX = remember { Animatable(0f) }
-    LaunchedEffect(wonder.id) {
-        AppGraph.engine.events.collect { event ->
-            if (event is GameEvent.WonderBuildDenied && event.id == wonder.id) {
-                shakeX.snapTo(0f)
-                shakeX.animateTo(8f, tween(40))
-                shakeX.animateTo(-8f, tween(80))
-                shakeX.animateTo(0f, tween(60))
-            }
-        }
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).background(EmberHeaderBar).padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                stringResource(wonder.nameRes),
-                color = when {
-                    owned -> EmberGoldBright
-                    unlocked -> EmberGold.copy(alpha = 0.8f)
-                    else -> EmberDim
-                },
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                stringResource(wonder.descriptionRes),
-                color = EmberDim,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        when {
-            owned -> Text(stringResource(Res.string.wonder_built_label), color = EmberDim, fontSize = 10.sp, fontFamily = pixelFontFamily())
-            !unlocked -> Text(
-                stringResource(Res.string.wonder_locked_hint, stringResource(AgeDefinition.all[wonder.unlockAgeIndex].nameRes)),
-                color = EmberDim,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
-            )
-            else -> Row(
-                modifier = Modifier
-                    .height(36.dp)
-                    .pixelFrame(
-                        fill = if (affordable) EmberAccent else EmberAccent.copy(alpha = 0.35f),
-                        bevelLight = EmberAccentBright,
-                    )
-                    .clickable { AppGraph.engine.buyWonder(wonder.id) }
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(Res.string.wonder_build_button, formatAmount(wonder.cost)),
-                    color = EmberWhite,
-                    fontSize = 10.sp,
-                    fontFamily = pixelFontFamily(),
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChronicleCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Text(stringResource(Res.string.chronicle_card_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-        if (state.chronicle.isEmpty()) {
-            Text(
-                stringResource(Res.string.chronicle_empty_hint),
-                color = EmberDim,
-                fontSize = 11.sp,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        } else {
-            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                state.chronicle.asReversed().take(12).forEach { entry ->
-                    Text(chronicleEntryText(entry), color = EmberDim, fontSize = 11.sp)
-                }
-            }
-        }
-    }
-}
-
 /** Resolves one [ChronicleEntry] into display text, looking up nested resources (achievement/age names) by id. */
 @Composable
 private fun chronicleEntryText(entry: ChronicleEntry): String {
@@ -1990,150 +2040,196 @@ private fun chronicleEntryText(entry: ChronicleEntry): String {
     return stringResource(type.templateRes, *args.toTypedArray())
 }
 
+/** ERFOLGE tab: a 2-column achievements grid, then the Chronicle entry list below it. */
 @Composable
-private fun AchievementsBlock(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(Res.string.reign_tab_achievements), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-            Text(
-                "${state.unlockedAchievements.size}/${AchievementDefinition.all.size} · +${formatAmount((achievementMultiplier(state) - 1.0) * 100.0)}%",
-                color = EmberGoldBright,
-                fontSize = 12.sp,
-            )
+private fun AchievementsTabContent(state: GameState) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+        Text(stringResource(Res.string.reign_tab_achievements).uppercase(), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.1f.em)
+        Text(
+            "${state.unlockedAchievements.size}/${AchievementDefinition.all.size} · +${formatAmount((achievementMultiplier(state) - 1.0) * 100.0)}%",
+            color = EmberGoldBright,
+            fontSize = 10.sp,
+            fontFamily = pixelFontFamily(),
+        )
+    }
+    Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        AchievementDefinition.all.chunked(2).forEach { rowDefs ->
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                rowDefs.forEach { achievement ->
+                    val unlocked = achievement.id in state.unlockedAchievements
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(EmberBackground)
+                            .border(2.dp, if (unlocked) EmberPalette.BevelLight else EmberPalette.Panel)
+                            .padding(horizontal = 12.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(modifier = Modifier.size(9.dp).background(if (unlocked) EmberGold else EmberPalette.Panel))
+                        Text(
+                            stringResource(achievement.nameRes),
+                            color = if (unlocked) EmberGold else LockedTextColor,
+                            fontSize = 9.sp,
+                            fontFamily = pixelFontFamily(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 9.dp),
+                        )
+                    }
+                }
+                repeat(2 - rowDefs.size) { Spacer(modifier = Modifier.weight(1f)) }
+            }
         }
-        FlowRow(
-            modifier = Modifier.padding(top = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            AchievementDefinition.all.forEach { achievement ->
-                val unlocked = achievement.id in state.unlockedAchievements
-                Box(modifier = Modifier.background(if (unlocked) EmberPanelLight else EmberHeaderBar).padding(horizontal = 7.dp, vertical = 5.dp)) {
-                    Text(stringResource(achievement.nameRes), color = if (unlocked) EmberGold else LockedTextColor, fontSize = 11.sp)
+    }
+    Text(
+        stringResource(Res.string.chronicle_card_title).uppercase(),
+        color = EmberDim,
+        fontSize = 9.sp,
+        fontFamily = pixelFontFamily(),
+        letterSpacing = 0.1f.em,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    if (state.chronicle.isEmpty()) {
+        Text(
+            stringResource(Res.string.chronicle_empty_hint),
+            color = EmberDim,
+            fontSize = 9.sp,
+            fontFamily = pixelFontFamily(),
+            fontStyle = FontStyle.Italic,
+            modifier = Modifier.padding(top = 11.dp),
+        )
+    } else {
+        Column(modifier = Modifier.padding(top = 11.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            state.chronicle.asReversed().take(12).forEach { entry ->
+                Row {
+                    Box(modifier = Modifier.padding(top = 4.dp).size(7.dp).background(EmberAccent))
+                    Text(
+                        chronicleEntryText(entry),
+                        color = EmberDim,
+                        fontSize = 9.sp,
+                        fontFamily = pixelFontFamily(),
+                        lineHeight = 1.8.em,
+                        modifier = Modifier.padding(start = 10.dp),
+                    )
                 }
             }
         }
     }
 }
 
+/** SYSTEM tab: language, offline/mute switches, volume, save/export/import, version. */
 @Composable
-private fun RulesSystemBlock(state: GameState) {
+private fun SystemTabContent(state: GameState) {
     var exportExpanded by remember { mutableStateOf(false) }
     var importExpanded by remember { mutableStateOf(false) }
     var importText by remember { mutableStateOf("") }
     var importMessage by remember { mutableStateOf<String?>(null) }
     val uiSettings by AppGraph.uiSettings.state.collectAsState()
 
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame(fill = EmberHeaderBar, raised = false).padding(12.dp)) {
-        // Stacked, not a Row with the label: this panel sits in a narrow sidebar/column on
-        // desktop, and 3 chips beside a label overflowed the available width, starving the
-        // label's weight(1f) Text down to near-zero and wrapping it one character per line —
-        // the same Row-starvation trap as the offline-progress row below, just triggered by an
-        // unweighted sibling that's too wide rather than too narrow.
-        Text(stringResource(Res.string.system_language_label), color = EmberGold, fontSize = 13.sp)
-        LanguageChips(
-            selected = uiSettings.language,
-            onSelect = { AppGraph.uiSettings.setLanguage(it) },
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-        )
+    Text(stringResource(Res.string.system_language_label).uppercase(), color = EmberDim, fontSize = 9.sp, fontFamily = pixelFontFamily(), letterSpacing = 0.1f.em)
+    LanguageChips(
+        selected = uiSettings.language,
+        onSelect = { AppGraph.uiSettings.setLanguage(it) },
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+    )
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             // weight(1f) is required here, not optional: a wrapping Text with no weight is
-            // measured against the Row's full width (it happily wraps to fill whatever it's
-            // given), leaving nothing for the switch after it — the same trap as the Dynasty
-            // path row above, just with a Text instead of a too-wide button as the offender.
-            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(stringResource(Res.string.rules_offline_progress_label), color = EmberGold, fontSize = 13.sp)
-                Text(stringResource(Res.string.rules_offline_progress_description), color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+            // measured against the Row's full width, leaving nothing for the switch after it.
+            Column(modifier = Modifier.weight(1f).padding(end = 14.dp)) {
+                Text(stringResource(Res.string.rules_offline_progress_label), color = EmberGold, fontSize = 10.sp, fontFamily = pixelFontFamily())
+                Text(
+                    stringResource(Res.string.rules_offline_progress_description),
+                    color = EmberDim,
+                    fontSize = 9.sp,
+                    fontFamily = pixelFontFamily(),
+                    lineHeight = 1.7.em,
+                    modifier = Modifier.padding(top = 7.dp),
+                )
             }
             PixelSwitch(checked = state.offlineProgressEnabled, onCheckedChange = { AppGraph.engine.setOfflineProgressEnabled(it) })
         }
-
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(Res.string.system_mute_label), color = EmberGold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(Res.string.system_mute_label), color = EmberGold, fontSize = 10.sp, fontFamily = pixelFontFamily(), modifier = Modifier.weight(1f))
             PixelSwitch(checked = uiSettings.muted, onCheckedChange = { AppGraph.uiSettings.setMuted(it) })
         }
+    }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(Res.string.system_volume_label), color = EmberGold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(Res.string.system_volume_label).uppercase(), color = EmberGold, fontSize = 10.sp, fontFamily = pixelFontFamily())
+        Text("${(uiSettings.masterVolume * 100).roundToInt()}%", color = EmberGoldBright, fontSize = 10.sp, fontFamily = pixelFontFamily())
+    }
+    VolumeBar(
+        volume = uiSettings.masterVolume,
+        onVolumeChange = { AppGraph.uiSettings.setMasterVolume(it) },
+        modifier = Modifier.fillMaxWidth().padding(top = 9.dp).height(12.dp),
+    )
+
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        SecondaryPixelButton(label = stringResource(Res.string.system_save_button_short), modifier = Modifier.weight(1f)) {
+            AppGraph.engine.persistNow()
+        }
+        SecondaryPixelButton(label = stringResource(Res.string.system_export_button), modifier = Modifier.weight(1f)) {
+            exportExpanded = !exportExpanded
+            importExpanded = false
+        }
+        SecondaryPixelButton(label = stringResource(Res.string.system_import_button_short), modifier = Modifier.weight(1f)) {
+            importExpanded = !importExpanded
+            exportExpanded = false
+        }
+    }
+
+    if (exportExpanded) {
+        SelectionContainer {
             Text(
-                "${(uiSettings.masterVolume * 100).roundToInt()}%",
-                color = EmberGoldBright,
-                fontSize = 13.sp,
-                fontFamily = pixelFontFamily(),
+                AppGraph.engine.exportSave(),
+                color = EmberGold.copy(alpha = 0.8f),
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .heightIn(max = 140.dp)
+                    .background(EmberBackground)
+                    .padding(10.dp),
             )
         }
-        VolumeBar(
-            volume = uiSettings.masterVolume,
-            onVolumeChange = { AppGraph.uiSettings.setMasterVolume(it) },
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(18.dp),
-        )
-
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            SecondaryPixelButton(label = stringResource(Res.string.system_save_button_short), modifier = Modifier.weight(1f)) {
-                AppGraph.engine.persistNow()
-            }
-            SecondaryPixelButton(label = stringResource(Res.string.system_export_button), modifier = Modifier.weight(1f)) {
-                exportExpanded = !exportExpanded
-                importExpanded = false
-            }
-            SecondaryPixelButton(label = stringResource(Res.string.system_import_button_short), modifier = Modifier.weight(1f)) {
-                importExpanded = !importExpanded
-                exportExpanded = false
-            }
-        }
-
-        if (exportExpanded) {
-            SelectionContainer {
-                Text(
-                    AppGraph.engine.exportSave(),
-                    color = EmberGold.copy(alpha = 0.8f),
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .heightIn(max = 140.dp)
-                        .pixelFrame(fill = EmberBackground, raised = false)
-                        .padding(10.dp),
-                )
-            }
-        }
-
-        if (importExpanded) {
-            Column(modifier = Modifier.padding(top = 8.dp)) {
-                OutlinedTextField(
-                    value = importText,
-                    onValueChange = { importText = it; importMessage = null },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
-                    textStyle = TextStyle(fontSize = 11.sp, color = EmberGold),
-                )
-                PixelButton(
-                    onClick = {
-                        val success = AppGraph.engine.importSave(importText)
-                        importMessage = if (success) null else "error"
-                        if (success) {
-                            importText = ""
-                            importExpanded = false
-                        }
-                    },
-                    modifier = Modifier.padding(top = 8.dp),
-                ) {
-                    Text(stringResource(Res.string.system_import_button), fontFamily = pixelFontFamily())
-                }
-                if (importMessage == "error") {
-                    Text(stringResource(Res.string.system_import_error), color = EmberAccent, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-                }
-            }
-        }
-
-        Text(
-            "${stringResource(Res.string.app_name)} ${BuildInfo.VERSION}",
-            color = LockedTextColor,
-            fontSize = 8.sp,
-            fontFamily = pixelFontFamily(),
-            modifier = Modifier.padding(top = 8.dp),
-        )
     }
+
+    if (importExpanded) {
+        Column(modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedTextField(
+                value = importText,
+                onValueChange = { importText = it; importMessage = null },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
+                textStyle = TextStyle(fontSize = 11.sp, color = EmberGold),
+            )
+            PixelButton(
+                onClick = {
+                    val success = AppGraph.engine.importSave(importText)
+                    importMessage = if (success) null else "error"
+                    if (success) {
+                        importText = ""
+                        importExpanded = false
+                    }
+                },
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text(stringResource(Res.string.system_import_button), fontFamily = pixelFontFamily())
+            }
+            if (importMessage == "error") {
+                Text(stringResource(Res.string.system_import_error), color = EmberAccent, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+    }
+
+    Text(
+        "${stringResource(Res.string.app_name)} ${BuildInfo.VERSION}",
+        color = LockedTextColor,
+        fontSize = 9.sp,
+        fontFamily = pixelFontFamily(),
+        modifier = Modifier.padding(top = 16.dp),
+    )
 }
 
 @Composable
@@ -2158,28 +2254,4 @@ private fun SecondaryPixelButton(label: String, modifier: Modifier = Modifier, o
 // Small shared atoms
 // ---------------------------------------------------------------------------------------------
 
-@Composable
-private fun IconValueLabel(
-    icon: @Composable () -> Unit,
-    iconSize: Dp,
-    value: String,
-    valueColor: Color,
-    valueFontSize: TextUnit,
-    label: String,
-    labelFontSize: TextUnit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(iconSize)) { icon() }
-        Text(value, color = valueColor, fontSize = valueFontSize, modifier = Modifier.padding(start = 5.dp))
-        Text(label, color = EmberDim, fontSize = labelFontSize, modifier = Modifier.padding(start = 4.dp))
-    }
-}
-
-@Composable
-private fun ValueLabel(value: String, label: String, valueColor: Color, valueFontSize: TextUnit, labelFontSize: TextUnit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(value, color = valueColor, fontSize = valueFontSize)
-        Text(label, color = EmberDim, fontSize = labelFontSize, modifier = Modifier.padding(start = 4.dp))
-    }
-}
+private data class CurrencyCellData(val value: String, val abbrRes: StringResource, val dot: Color, val ringHighlight: Boolean)

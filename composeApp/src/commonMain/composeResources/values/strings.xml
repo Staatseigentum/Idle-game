@@ -249,4 +249,21 @@
     <string name="quest_three_high_levels">Balanced Realm</string>
 
     <string name="dynasty_switch_cooldown_hint">Next switch in %1$s</string>
+
+    <string name="age_stage_progress_label">STAGE %1$d/%2$d · %3$s TO ASCENSION</string>
+    <string name="age_ladder_progress_label">LADDER %1$d/%2$d</string>
+    <string name="rail_chronicle_label">CHRONICLE · %1$s</string>
+    <string name="click_for_gold_label">CLICK FOR GOLD</string>
+    <string name="currencies_label">CURRENCIES</string>
+    <string name="reign_tab_realm">Realm</string>
+    <string name="realm_fallen_title">THE REALM HAS FALLEN</string>
+    <string name="verfall_footer_yield_label">The Blight now yields %1$s Chronicle Points</string>
+    <string name="currency_abbr_chronicle">CHR</string>
+    <string name="currency_abbr_legends">LEG</string>
+    <string name="currency_abbr_influence">INF</string>
+    <string name="currency_abbr_achievements">ACH</string>
+    <string name="production_label">PRODUCTION</string>
+    <string name="per_click_label">%1$s per tap</string>
+    <string name="academy_card_description">Chronicle Points become lasting production.</string>
+    <string name="ratssaal_card_description">Influence buys permanent rights.</string>
 </resources>

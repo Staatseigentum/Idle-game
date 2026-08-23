@@ -137,7 +137,9 @@ fun PixelSwitch(
     }
 }
 
-/** A chunky, segmented pixel progress bar (distinct blocks with a gap, not a smooth fill). */
+/** A chunky, segmented pixel progress bar (distinct blocks with a gap, not a smooth fill).
+ * Segment width is always derived by dividing the given [modifier]'s width evenly, so the bar
+ * stays responsive at any container width instead of overflowing a resizable window. */
 @Composable
 fun PixelSegmentedBar(
     progress: Float,

@@ -249,4 +249,21 @@
     <string name="quest_three_high_levels">Ausgewogenes Reich</string>
 
     <string name="dynasty_switch_cooldown_hint">Nächster Wechsel in %1$s</string>
+
+    <string name="age_stage_progress_label">STUFE %1$d/%2$d · %3$s BIS ZUM AUFSTIEG</string>
+    <string name="age_ladder_progress_label">LEITER %1$d/%2$d</string>
+    <string name="rail_chronicle_label">CHRONIK · %1$s</string>
+    <string name="click_for_gold_label">KLICKEN FÜR GOLD</string>
+    <string name="currencies_label">WÄHRUNGEN</string>
+    <string name="reign_tab_realm">Reich</string>
+    <string name="realm_fallen_title">DAS REICH IST GEFALLEN</string>
+    <string name="verfall_footer_yield_label">Der Verfall bringt jetzt %1$s Chroniken</string>
+    <string name="currency_abbr_chronicle">CHR</string>
+    <string name="currency_abbr_legends">SAG</string>
+    <string name="currency_abbr_influence">EIN</string>
+    <string name="currency_abbr_achievements">ERF</string>
+    <string name="production_label">PRODUKTION</string>
+    <string name="per_click_label">%1$s pro Klick</string>
+    <string name="academy_card_description">Chroniken werden zu dauerhafter Produktion.</string>
+    <string name="ratssaal_card_description">Einfluss kauft dauerhafte Rechte.</string>
 </resources>

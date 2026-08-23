@@ -8,10 +8,16 @@ import kotlin.math.abs
  * buys a finer dither (the gradient steps land closer together) at no draw cost, because the art
  * is rasterized to a bitmap once and blitted.
  */
-private const val U = 2
+// U=3 (was 2) for a finer dither; SCENE_H=54 (was 36) brings the canvas from a 2.22:1 banner
+// crop down to ~1.48:1 — close to what the redesign's Contain-fit stage box actually offers, so
+// the art fills the frame instead of floating letterboxed in a mostly-empty one. HORIZON keeps
+// the same ~75% sky / 25% ground split; the settlement itself (wallHeight/towerHeight below)
+// stays at its old absolute height, so the extra sky reads as a grander, more distant vista
+// rather than a stretched settlement.
+private const val U = 3
 private const val SCENE_W = 80 * U
-private const val SCENE_H = 36 * U
-private const val HORIZON = 27 * U
+private const val SCENE_H = 54 * U
+private const val HORIZON = 41 * U
 
 // Palette key groups, all mutually distinct so materials never collide.
 private const val SKY = "12345678"
@@ -122,6 +128,19 @@ fun ageSceneArt(index: Int, ageCount: Int): PixelArt {
         g.set(sx, sy, if (hash(i + 31) % 4 == 0) STAR else STAR_DIM)
     }
 
+    // Daytime skies got noticeably taller with the wider HORIZON headroom above — a few flat
+    // cloud puffs (three overlapping ellipses each) keep that space from reading as empty.
+    val cloudColor = lerpColor(skyHorizon, Color(0xFFFFD9A0), 0.45)
+    if (!p.night) {
+        for (i in 0 until 3) {
+            val cx = (hash(index * 5081 + i * 2) % (SCENE_W - 20 * U)) + 10 * U
+            val cy = (hash(index * 5081 + i * 2 + 1) % (HORIZON / 2)) + 4 * U
+            g.ellipse(cx, cy, 7 * U, 2 * U, 'z')
+            g.ellipse(cx - 5 * U, cy + U, 4 * U, 2 * U, 'z')
+            g.ellipse(cx + 5 * U, cy + U, 4 * U, 2 * U, 'z')
+        }
+    }
+
     g.triangle(-6 * U, HORIZON, 26 * U, HORIZON, 10 * U, HORIZON - 9 * U, 'w')
     g.triangle(16 * U, HORIZON, 48 * U, HORIZON, 32 * U, HORIZON - 6 * U, 'w')
     g.triangle(52 * U, HORIZON, 86 * U, HORIZON, 68 * U, HORIZON - 11 * U, 'w')
@@ -206,6 +225,7 @@ fun ageSceneArt(index: Int, ageCount: Int): PixelArt {
             STAR_DIM to lerpColor(skyHorizon, EmberPalette.White, 0.45),
             DOOR to Color(0xFF0E0A10),
             WINDOW to windowGlow,
+            'z' to cloudColor,
         )
     return g.build(palette)
 }
