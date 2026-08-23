@@ -1,9 +1,13 @@
 package com.embercrown.game.game
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -11,12 +15,26 @@ import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
+/** One-shot notifications for feedback (sound/animation) that a [StateFlow] snapshot can't carry. */
+sealed interface GameEvent {
+    data class GoldTapped(val amount: Double) : GameEvent
+    data class PurchaseSucceeded(val buildingId: String) : GameEvent
+    data class PurchaseDenied(val buildingId: String) : GameEvent
+    data object AcademyStudySucceeded : GameEvent
+    data object AcademyStudyDenied : GameEvent
+    data class AchievementUnlocked(val id: String) : GameEvent
+    data class AgeAdvanced(val newIndex: Int) : GameEvent
+}
+
 class GameEngine(
     private val scope: CoroutineScope,
     private val repository: SaveRepository,
 ) {
     private val _state = MutableStateFlow(repository.load())
     val state: StateFlow<GameState> = _state.asStateFlow()
+
+    private val _events = MutableSharedFlow<GameEvent>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val events: SharedFlow<GameEvent> = _events.asSharedFlow()
 
     init {
         applyOfflineProgress()
@@ -39,26 +57,35 @@ class GameEngine(
         s.copy(gold = s.gold + gained, lifetimeGold = s.lifetimeGold + gained)
     }
 
-    fun click() = mutate { s ->
-        val gained = clickGain(s)
-        s.copy(gold = s.gold + gained, lifetimeGold = s.lifetimeGold + gained)
+    fun click() {
+        var gained = 0.0
+        mutate { s ->
+            gained = clickGain(s)
+            s.copy(gold = s.gold + gained, lifetimeGold = s.lifetimeGold + gained)
+        }
+        _events.tryEmit(GameEvent.GoldTapped(gained))
     }
 
     /** Buys [quantity] levels of [buildingId], or as many as affordable if [quantity] is null (MAX). */
-    fun buy(buildingId: String, quantity: Int? = null) = mutate { s ->
-        val definition = BuildingDefinition.byId(buildingId)
-        if (!isBuildingUnlocked(definition, s)) return@mutate s
-        val level = s.buildingLevel(buildingId)
-        val qty = quantity ?: maxAffordableQuantity(definition, level, s.gold)
-        if (qty <= 0) return@mutate s
-        val cost = bulkBuildingCost(definition, level, qty)
-        if (s.gold < cost) return@mutate s
-        s.copy(
-            gold = s.gold - cost,
-            buildings = s.buildings.map {
-                if (it.id == buildingId) it.copy(level = it.level + qty) else it
-            },
-        )
+    fun buy(buildingId: String, quantity: Int? = null) {
+        var succeeded = false
+        mutate { s ->
+            val definition = BuildingDefinition.byId(buildingId)
+            if (!isBuildingUnlocked(definition, s)) return@mutate s
+            val level = s.buildingLevel(buildingId)
+            val qty = quantity ?: maxAffordableQuantity(definition, level, s.gold)
+            if (qty <= 0) return@mutate s
+            val cost = bulkBuildingCost(definition, level, qty)
+            if (s.gold < cost) return@mutate s
+            succeeded = true
+            s.copy(
+                gold = s.gold - cost,
+                buildings = s.buildings.map {
+                    if (it.id == buildingId) it.copy(level = it.level + qty) else it
+                },
+            )
+        }
+        _events.tryEmit(if (succeeded) GameEvent.PurchaseSucceeded(buildingId) else GameEvent.PurchaseDenied(buildingId))
     }
 
     fun canTriggerVerfall(): Boolean = _state.value.lifetimeGold >= MIN_LIFETIME_GOLD_FOR_VERFALL
@@ -85,10 +112,15 @@ class GameEngine(
         persistNow()
     }
 
-    fun buyAcademyUpgrade() = mutate { s ->
-        val cost = academyUpgradeCost(s.academyLevel)
-        if (s.chroniclePoints < cost) return@mutate s
-        s.copy(chroniclePoints = s.chroniclePoints - cost, academyLevel = s.academyLevel + 1)
+    fun buyAcademyUpgrade() {
+        var succeeded = false
+        mutate { s ->
+            val cost = academyUpgradeCost(s.academyLevel)
+            if (s.chroniclePoints < cost) return@mutate s
+            succeeded = true
+            s.copy(chroniclePoints = s.chroniclePoints - cost, academyLevel = s.academyLevel + 1)
+        }
+        _events.tryEmit(if (succeeded) GameEvent.AcademyStudySucceeded else GameEvent.AcademyStudyDenied)
     }
 
     fun canTriggerWiedergeburt(): Boolean = _state.value.verfallCount >= MIN_VERFALL_COUNT_FOR_WIEDERGEBURT
@@ -143,7 +175,21 @@ class GameEngine(
     }
 
     private fun mutate(block: (GameState) -> GameState) {
-        _state.update { s -> refreshAchievements(block(s)) }
+        lateinit var prev: GameState
+        lateinit var next: GameState
+        _state.update { s ->
+            prev = s
+            next = refreshAchievements(block(s))
+            next
+        }
+        (next.unlockedAchievements - prev.unlockedAchievements).forEach {
+            _events.tryEmit(GameEvent.AchievementUnlocked(it))
+        }
+        // `>` not `!=`: triggerVerfall/triggerWiedergeburt rebuild a fresh GameState that resets
+        // lifetimeGold (and therefore currentAge back down) — that must not fire a fanfare.
+        if (next.currentAge.index > prev.currentAge.index) {
+            _events.tryEmit(GameEvent.AgeAdvanced(next.currentAge.index))
+        }
     }
 
     private fun refreshAchievements(s: GameState): GameState {

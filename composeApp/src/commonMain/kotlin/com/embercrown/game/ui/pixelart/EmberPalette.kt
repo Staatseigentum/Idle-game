@@ -10,6 +10,11 @@ object EmberPalette {
     val Background = Color(0xFF14100C)
     val Panel = Color(0xFF231B14)
     val PanelLight = Color(0xFF2E2318)
+
+    // The redesigned layout's header bar / progress row / footer nav / inset cards, and the
+    // ages rail + Reich column backgrounds — both slightly darker than Panel, distinct from it.
+    val HeaderBar = Color(0xFF1B1510)
+    val Rail = Color(0xFF181310)
     val Accent = Color(0xFF8B2E2E)
     val AccentBright = Color(0xFFB23A3A)
     val Dim = Color(0xFF6B5A46)

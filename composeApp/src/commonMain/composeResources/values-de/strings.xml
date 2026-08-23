@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aschenkrone</string>
+    <string name="app_name">Embercrown</string>
     <string name="tagline">Ein Königreich, das niemals wirklich stirbt.</string>
 
     <string name="gold_label">Gold</string>
@@ -14,9 +14,14 @@
     <string name="locked_until_label">Freigeschaltet ab %1$s</string>
     <string name="buy_multiplier_label">Kaufen</string>
     <string name="progress_to_next_age">%1$s bis %2$s</string>
+    <string name="next_age_label">Nächstes Zeitalter</string>
 
     <string name="tab_holdings">Gebäude</string>
     <string name="tab_reign">Reich</string>
+    <string name="reign_title">Das Reich</string>
+    <string name="locked_section_title">Gesperrt</string>
+    <string name="locked_group_label">%1$d weitere Gebäude schlummern</string>
+    <string name="locked_group_from">ab %1$s</string>
 
     <string name="chronicle_points_label">Chroniken</string>
     <string name="verfall_title">Der Verfall</string>
@@ -25,10 +30,14 @@
     <string name="verfall_reward_preview">Belohnung jetzt: %1$s Chroniken</string>
     <string name="verfall_locked_hint">Erreiche %1$s Lebenszeit-Gold, um den Verfall einzuleiten.</string>
     <string name="verfall_count_label">Überstandene Verfälle: %1$d</string>
+    <string name="verfalls_label">Verfälle</string>
+    <string name="verfall_survived_short">%1$d überstanden</string>
+    <string name="reward_yield_label">bringt</string>
 
     <string name="academy_title">Akademie</string>
     <string name="academy_level_label">Stufe %1$d — +%2$s%% Produktion</string>
     <string name="academy_upgrade_button">Studieren — %1$s Chroniken</string>
+    <string name="academy_study_button">Studieren</string>
 
     <string name="reign_tab_verfall">Verfall</string>
     <string name="reign_tab_dynasty">Dynastie</string>
@@ -44,11 +53,12 @@
     <string name="wiedergeburt_reward_preview">Belohnung jetzt: %1$s Sagen</string>
     <string name="wiedergeburt_count_label">Wiedergeburten: %1$d</string>
     <string name="legends_label">Sagen</string>
+    <string name="dynasty_title">Dynastie</string>
     <string name="dynasty_path_level_label">Stufe %1$d — +%2$s%%</string>
     <string name="dynasty_path_active_label">Aktiv</string>
     <string name="dynasty_path_activate_button">Aktivieren</string>
     <string name="dynasty_path_invest_button">Investieren — %1$s Sagen</string>
-    <string name="dynasty_switch_hint">Nur der Bonus des aktiven Pfades wirkt — die anderen behalten ihre Stufe, schlafen aber.</string>
+    <string name="dynasty_switch_hint">Nur der aktive Pfad wirkt</string>
 
     <string name="dynasty_path_steel">Pfad des Stahls</string>
     <string name="dynasty_path_steel_desc">Rohe Kraft. Jedes Gebäude produziert mehr.</string>
@@ -73,14 +83,25 @@
     <string name="rules_offline_progress_label">Offline-Fortschritt</string>
     <string name="rules_offline_progress_description">Sammle weiter Gold, während das Spiel geschlossen ist (max. 8 Stunden).</string>
 
+    <string name="system_language_label">Sprache</string>
+    <string name="system_language_system">System</string>
+    <string name="system_language_english">Englisch</string>
+    <string name="system_language_german">Deutsch</string>
+    <string name="system_volume_label">Lautstärke</string>
+    <string name="system_mute_label">Stumm</string>
+
     <string name="system_save_button">Jetzt speichern</string>
+    <string name="system_save_button_short">Speichern</string>
     <string name="system_export_title">Speicherstand exportieren</string>
     <string name="system_export_hint">Kopiere diesen Text, um deinen Fortschritt zu sichern.</string>
     <string name="system_import_title">Speicherstand importieren</string>
     <string name="system_import_hint">Füge hier einen zuvor exportierten Speicherstand ein.</string>
     <string name="system_import_button">Laden</string>
+    <string name="system_export_button">Export</string>
+    <string name="system_import_button_short">Import</string>
     <string name="system_import_success">Speicherstand geladen.</string>
-    <string name="system_import_error">Das sieht nicht nach einem gültigen Aschenkrone-Speicherstand aus.</string>
+    <string name="footer_new_label">neu</string>
+    <string name="system_import_error">Das sieht nicht nach einem gültigen Embercrown-Speicherstand aus.</string>
     <string name="system_reset_title">Alles zurücksetzen</string>
     <string name="system_reset_description">Löscht Gold, Gebäude, Chroniken, Akademie und Erfolge. Kann nicht rückgängig gemacht werden.</string>
     <string name="system_reset_button">Alles zurücksetzen</string>

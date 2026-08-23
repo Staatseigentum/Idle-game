@@ -14,9 +14,14 @@
     <string name="locked_until_label">Unlocks at %1$s</string>
     <string name="buy_multiplier_label">Buy</string>
     <string name="progress_to_next_age">%1$s to %2$s</string>
+    <string name="next_age_label">Next age</string>
 
     <string name="tab_holdings">Holdings</string>
     <string name="tab_reign">Reign</string>
+    <string name="reign_title">The Realm</string>
+    <string name="locked_section_title">Locked</string>
+    <string name="locked_group_label">%1$d more holdings sleep</string>
+    <string name="locked_group_from">from %1$s</string>
 
     <string name="chronicle_points_label">Chronicle Points</string>
     <string name="verfall_title">The Blight</string>
@@ -25,10 +30,14 @@
     <string name="verfall_reward_preview">Reward now: %1$s Chronicle Points</string>
     <string name="verfall_locked_hint">Reach %1$s lifetime gold to embrace the Blight.</string>
     <string name="verfall_count_label">Falls survived: %1$d</string>
+    <string name="verfalls_label">Blights</string>
+    <string name="verfall_survived_short">%1$d survived</string>
+    <string name="reward_yield_label">yields</string>
 
     <string name="academy_title">Academy</string>
     <string name="academy_level_label">Level %1$d — +%2$s%% production</string>
     <string name="academy_upgrade_button">Study — %1$s CP</string>
+    <string name="academy_study_button">Study</string>
 
     <string name="reign_tab_verfall">Blight</string>
     <string name="reign_tab_dynasty">Dynasty</string>
@@ -44,11 +53,12 @@
     <string name="wiedergeburt_reward_preview">Reward now: %1$s Legends</string>
     <string name="wiedergeburt_count_label">Rebirths: %1$d</string>
     <string name="legends_label">Legends</string>
+    <string name="dynasty_title">Dynasty</string>
     <string name="dynasty_path_level_label">Level %1$d — +%2$s%%</string>
     <string name="dynasty_path_active_label">Active</string>
     <string name="dynasty_path_activate_button">Make active</string>
     <string name="dynasty_path_invest_button">Invest — %1$s Legends</string>
-    <string name="dynasty_switch_hint">Only the active path\'s bonus applies — the others keep their level, just asleep.</string>
+    <string name="dynasty_switch_hint">Only the active path applies</string>
 
     <string name="dynasty_path_steel">Path of Steel</string>
     <string name="dynasty_path_steel_desc">Raw might. Every holding produces more.</string>
@@ -73,13 +83,24 @@
     <string name="rules_offline_progress_label">Offline progress</string>
     <string name="rules_offline_progress_description">Keep earning gold while the game is closed (capped at 8 hours).</string>
 
+    <string name="system_language_label">Language</string>
+    <string name="system_language_system">System</string>
+    <string name="system_language_english">English</string>
+    <string name="system_language_german">German</string>
+    <string name="system_volume_label">Volume</string>
+    <string name="system_mute_label">Mute</string>
+
     <string name="system_save_button">Save now</string>
+    <string name="system_save_button_short">Save</string>
     <string name="system_export_title">Export save</string>
     <string name="system_export_hint">Copy this text to back up your progress.</string>
     <string name="system_import_title">Import save</string>
     <string name="system_import_hint">Paste a previously exported save here.</string>
     <string name="system_import_button">Load</string>
+    <string name="system_export_button">Export</string>
+    <string name="system_import_button_short">Import</string>
     <string name="system_import_success">Save loaded.</string>
+    <string name="footer_new_label">new</string>
     <string name="system_import_error">That doesn\'t look like a valid Embercrown save.</string>
     <string name="system_reset_title">Reset everything</string>
     <string name="system_reset_description">Wipes gold, buildings, Chronicle Points, Academy and Achievements. Cannot be undone.</string>
