@@ -171,8 +171,10 @@ jobs:
           curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
           unzip -q butler.zip -d butler
           chmod +x butler/butler
+          # GITHUB_PATH only takes effect starting with the *next* step, so verify via the
+          # full path here rather than a bare `butler` call.
           echo "$PWD/butler" >> "$GITHUB_PATH"
-          butler -V
+          ./butler/butler -V
 
       - name: Determine version
         id: version
