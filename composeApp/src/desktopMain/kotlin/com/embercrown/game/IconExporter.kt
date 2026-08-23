@@ -42,7 +42,7 @@ fun main(args: Array<String>) {
 }
 
 /** Nearest-neighbor rasterization of [art] to an exact [size]x[size] bitmap, up- or downscaling. */
-private fun renderToSize(art: PixelArt, size: Int): BufferedImage {
+internal fun renderToSize(art: PixelArt, size: Int): BufferedImage {
     val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
     for (y in 0 until size) {
         val sy = (y * art.height / size).coerceIn(0, art.height - 1)
@@ -59,7 +59,7 @@ private fun renderToSize(art: PixelArt, size: Int): BufferedImage {
     return image
 }
 
-private fun BufferedImage.toPngBytes(): ByteArray {
+internal fun BufferedImage.toPngBytes(): ByteArray {
     val out = ByteArrayOutputStream()
     ImageIO.write(this, "png", out)
     return out.toByteArray()

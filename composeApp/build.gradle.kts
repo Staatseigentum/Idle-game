@@ -114,6 +114,26 @@ kotlin {
     }
 }
 
+val androidIconOutputDir = layout.buildDirectory.dir("generated/androidRes")
+
+/** Rasterizes `appIcon()` into a res/mipmap-… tree — no icon asset is checked into git. */
+val generateAndroidIcons by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Renders appIcon() into res/mipmap-*/ic_launcher(.round).png for the Android app."
+    val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    dependsOn(desktopMain.compileTaskProvider)
+    mainClass.set("com.embercrown.game.AndroidIconExporterKt")
+    classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
+    val outDir = androidIconOutputDir
+    outputs.dir(outDir)
+    doFirst { args = listOf(outDir.get().asFile.absolutePath) }
+}
+
+// `res.srcDir(androidIconOutputDir)` above only points AAPT at the directory — it doesn't make
+// resource merging wait for it to be populated. Hanging the icon task off `preBuild`, which
+// every resource-processing task depends on transitively, guarantees the PNGs exist first.
+tasks.named("preBuild") { dependsOn(generateAndroidIcons) }
+
 android {
     namespace = "com.embercrown.game"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -129,11 +149,26 @@ android {
     sourceSets["main"].apply {
         manifest.srcFile("src/androidMain/AndroidManifest.xml")
         res.srcDirs("src/androidMain/res")
+        res.srcDir(androidIconOutputDir)
     }
 
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    // A checked-in keystore, not the default auto-generated per-machine one: CI runners are
+    // ephemeral, so without this every release build would get a fresh, different debug
+    // signing key, and installing a new APK over an older one would fail with a signature
+    // mismatch ("App not installed"). This key is debug-only — never used to sign a Play
+    // Store release — so committing it carries none of the risk a real release key would.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
