@@ -32,7 +32,16 @@
     <string name="verfall_count_label">Falls survived: %1$d</string>
     <string name="verfalls_label">Blights</string>
     <string name="verfall_survived_short">%1$d survived</string>
+    <string name="verfall_corruption_label">The Blight is spreading</string>
     <string name="reward_yield_label">yields</string>
+
+    <string name="chronicle_card_title">Chronicle</string>
+    <string name="chronicle_empty_hint">Nothing written yet. The realm's story starts with your first fall.</string>
+    <string name="chronicle_entry_age_advanced">The chronicle turns a page: the realm has become a %1$s.</string>
+    <string name="chronicle_entry_blight_embraced">Blight No. %1$s survived — %2$s Chronicle Points gained.</string>
+    <string name="chronicle_entry_rebirth">Rebirth No. %1$s: %2$s Legends gained, everything else forgotten.</string>
+    <string name="chronicle_entry_achievement_unlocked">An achievement for the ages: %1$s.</string>
+    <string name="chronicle_entry_corruption_peaked">The Blight has fully consumed the kingdom.</string>
 
     <string name="academy_title">Academy</string>
     <string name="academy_level_label">Level %1$d — +%2$s%% production</string>
@@ -165,4 +174,79 @@
     <string name="update_current_version">You are playing %1$s</string>
     <string name="update_download">Download</string>
     <string name="update_dismiss">Later</string>
+
+    <string name="milestone_hint_label">Next milestone: Lv. %1$d (×%2$s)</string>
+    <string name="building_synergy_hint">+%1$s%% from %2$s</string>
+
+    <string name="offline_report_title">While You Were Away</string>
+    <string name="offline_report_body">%1$s passed. Your holdings earned %2$s gold.</string>
+    <string name="offline_report_dismiss_button">Continue</string>
+    <string name="offline_flavor_short">Barely turned your back, and there is gold again already.</string>
+    <string name="offline_flavor_medium">While you were away, the kingdom kept working.</string>
+    <string name="offline_flavor_long">You were gone a long while — the coffers filled up regardless.</string>
+
+    <string name="dragon_buff_badge">×7 production — %1$ds</string>
+
+    <string name="einfluss_label">Influence</string>
+
+    <string name="ratssaal_title">Council Hall</string>
+    <string name="ratssaal_owned_label">Owned</string>
+    <string name="ratssaal_buy_button">%1$s Influence</string>
+    <string name="ratssaal_upgrade_zunftrecht">Guild Charter</string>
+    <string name="ratssaal_upgrade_zunftrecht_desc">+15% production, permanently.</string>
+    <string name="ratssaal_upgrade_freihandel">Free Trade</string>
+    <string name="ratssaal_upgrade_freihandel_desc">-5% holding costs, permanently.</string>
+    <string name="ratssaal_upgrade_gesandte">Envoys of the Court</string>
+    <string name="ratssaal_upgrade_gesandte_desc">+25% Influence income.</string>
+    <string name="ratssaal_upgrade_alte_karten">Old Maps</string>
+    <string name="ratssaal_upgrade_alte_karten_desc">+20% Chronicle Points from the Blight.</string>
+    <string name="ratssaal_upgrade_wachen">Watchful Guards</string>
+    <string name="ratssaal_upgrade_wachen_desc">-30% Blight corruption growth.</string>
+
+    <string name="wonders_title">Wonders</string>
+    <string name="wonder_locked_hint">Unlocks at %1$s</string>
+    <string name="wonder_build_button">Build — %1$s</string>
+    <string name="wonder_built_label">Built</string>
+    <string name="wonder_triumphal_road">Triumphal Road</string>
+    <string name="wonder_triumphal_road_desc">+10% total production, permanently.</string>
+    <string name="wonder_spire">Ebony Spire</string>
+    <string name="wonder_spire_desc">-15% Blight corruption growth, permanently.</string>
+    <string name="wonder_archive">Sunken Archive</string>
+    <string name="wonder_archive_desc">+15% Chronicle Points from the Blight, permanently.</string>
+
+    <string name="heir_card_title">Heir</string>
+    <string name="heir_none_hint">No heir yet — the first Rebirth crowns one.</string>
+    <string name="heir_name_and_trait">%1$s — %2$s</string>
+    <string name="heir_trait_diligent">The Diligent</string>
+    <string name="heir_trait_diligent_desc">+8% total production.</string>
+    <string name="heir_trait_frugal">The Frugal</string>
+    <string name="heir_trait_frugal_desc">-8% holding costs.</string>
+    <string name="heir_trait_vigilant">The Vigilant</string>
+    <string name="heir_trait_vigilant_desc">-15% Blight corruption growth.</string>
+    <string name="heir_trait_wise">The Wise</string>
+    <string name="heir_trait_wise_desc">+10% Chronicle Points from the Blight.</string>
+    <string name="heir_trait_sociable">The Sociable</string>
+    <string name="heir_trait_sociable_desc">+20% Influence income.</string>
+    <string name="heir_trait_strong">The Strong</string>
+    <string name="heir_trait_strong_desc">+15% tap gain.</string>
+
+    <string name="quests_title">Deeds</string>
+    <string name="quest_reward_label">Reward</string>
+    <string name="quest_claim_button">Claim</string>
+    <string name="quests_empty_hint">No open deeds right now.</string>
+
+    <string name="quest_first_building">First Holding</string>
+    <string name="quest_fifty_gold">Fifty Gold</string>
+    <string name="quest_reach_village">Village Bound</string>
+    <string name="quest_ten_levels">Growing Holdings</string>
+    <string name="quest_milestone_building">Breaking Ground</string>
+    <string name="quest_first_verfall">Taste of the Blight</string>
+    <string name="quest_academy_level_three">Eager Student</string>
+    <string name="quest_five_achievements">Storied Already</string>
+    <string name="quest_reach_age_five">Free City Rising</string>
+    <string name="quest_first_wiedergeburt">Legend Born</string>
+    <string name="quest_dynasty_level_five">Court Favor</string>
+    <string name="quest_three_high_levels">Balanced Realm</string>
+
+    <string name="dynasty_switch_cooldown_hint">Next switch in %1$s</string>
 </resources>

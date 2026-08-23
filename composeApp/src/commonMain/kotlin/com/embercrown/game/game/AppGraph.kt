@@ -37,4 +37,19 @@ object AppGraph {
             preload(MusicBank.theme())
         }
     }
+
+    /**
+     * A second, independent loop of [MusicBank.corruptedTheme] — kept playing at all times
+     * alongside [musicPlayer] rather than swapped in, so the two can be continuously crossfaded by
+     * volume alone as Verfall corruption rises (see the `LaunchedEffect` in App.kt). This avoids
+     * needing any new pitch/filter API on the `expect`/`actual` [MusicPlayer] itself.
+     */
+    val corruptedMusicPlayer: MusicPlayer by lazy {
+        MusicPlayer().apply {
+            val initial = uiSettings.state.value
+            setVolume(0f)
+            setMuted(initial.muted)
+            preload(MusicBank.corruptedTheme())
+        }
+    }
 }

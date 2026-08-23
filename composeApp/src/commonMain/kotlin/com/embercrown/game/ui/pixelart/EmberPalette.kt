@@ -77,4 +77,7 @@ object Ramps {
 
     val PaperDark = Color(0xFF8A7550)
     val PaperLight = Color(0xFFFBF3DC)
+
+    val CorruptionDark = Color(0xFF120014)
+    val CorruptionLight = Color(0xFF4A1D52)
 }

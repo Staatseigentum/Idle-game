@@ -32,7 +32,16 @@
     <string name="verfall_count_label">Überstandene Verfälle: %1$d</string>
     <string name="verfalls_label">Verfälle</string>
     <string name="verfall_survived_short">%1$d überstanden</string>
+    <string name="verfall_corruption_label">Der Verfall breitet sich aus</string>
     <string name="reward_yield_label">bringt</string>
+
+    <string name="chronicle_card_title">Chronik</string>
+    <string name="chronicle_empty_hint">Noch nichts geschrieben. Die Geschichte des Reiches beginnt mit dem ersten Fall.</string>
+    <string name="chronicle_entry_age_advanced">Die Chronik schlägt eine neue Seite auf: das Reich ist nun %1$s.</string>
+    <string name="chronicle_entry_blight_embraced">Verfall Nr. %1$s überstanden — %2$s Chroniken gewonnen.</string>
+    <string name="chronicle_entry_rebirth">Wiedergeburt Nr. %1$s: %2$s Sagen gewonnen, alles andere vergessen.</string>
+    <string name="chronicle_entry_achievement_unlocked">Ein Erfolg für die Ewigkeit: %1$s.</string>
+    <string name="chronicle_entry_corruption_peaked">Der Verfall hat das Königreich vollständig ergriffen.</string>
 
     <string name="academy_title">Akademie</string>
     <string name="academy_level_label">Stufe %1$d — +%2$s%% Produktion</string>
@@ -165,4 +174,79 @@
     <string name="update_current_version">Du spielst %1$s</string>
     <string name="update_download">Herunterladen</string>
     <string name="update_dismiss">Später</string>
+
+    <string name="milestone_hint_label">Nächster Meilenstein: Stufe %1$d (×%2$s)</string>
+    <string name="building_synergy_hint">+%1$s%% durch %2$s</string>
+
+    <string name="offline_report_title">Während du weg warst</string>
+    <string name="offline_report_body">%1$s sind vergangen. Deine Gebäude haben %2$s Gold erwirtschaftet.</string>
+    <string name="offline_report_dismiss_button">Weiter</string>
+    <string name="offline_flavor_short">Kaum den Rücken gekehrt, und schon ist wieder Gold da.</string>
+    <string name="offline_flavor_medium">Während du fort warst, hat das Königreich weitergearbeitet.</string>
+    <string name="offline_flavor_long">Du warst lange fort — die Truhen sind trotzdem voller geworden.</string>
+
+    <string name="dragon_buff_badge">×7 Produktion — %1$ds</string>
+
+    <string name="einfluss_label">Einfluss</string>
+
+    <string name="ratssaal_title">Ratssaal</string>
+    <string name="ratssaal_owned_label">Erworben</string>
+    <string name="ratssaal_buy_button">%1$s Einfluss</string>
+    <string name="ratssaal_upgrade_zunftrecht">Zunftrecht</string>
+    <string name="ratssaal_upgrade_zunftrecht_desc">+15% Produktion, dauerhaft.</string>
+    <string name="ratssaal_upgrade_freihandel">Freihandel</string>
+    <string name="ratssaal_upgrade_freihandel_desc">-5% Gebäudekosten, dauerhaft.</string>
+    <string name="ratssaal_upgrade_gesandte">Gesandte des Hofes</string>
+    <string name="ratssaal_upgrade_gesandte_desc">+25% Einfluss-Einkommen.</string>
+    <string name="ratssaal_upgrade_alte_karten">Alte Karten</string>
+    <string name="ratssaal_upgrade_alte_karten_desc">+20% Chroniken aus dem Verfall.</string>
+    <string name="ratssaal_upgrade_wachen">Wachsame Wachen</string>
+    <string name="ratssaal_upgrade_wachen_desc">-30% Wachstum des Verfalls.</string>
+
+    <string name="wonders_title">Wunder</string>
+    <string name="wonder_locked_hint">Schaltet frei bei %1$s</string>
+    <string name="wonder_build_button">Bauen — %1$s</string>
+    <string name="wonder_built_label">Erbaut</string>
+    <string name="wonder_triumphal_road">Triumphstraße</string>
+    <string name="wonder_triumphal_road_desc">+10% Gesamtproduktion, dauerhaft.</string>
+    <string name="wonder_spire">Schwarzer Wartturm</string>
+    <string name="wonder_spire_desc">-15% Wachstum des Verfalls, dauerhaft.</string>
+    <string name="wonder_archive">Versunkenes Archiv</string>
+    <string name="wonder_archive_desc">+15% Chroniken aus dem Verfall, dauerhaft.</string>
+
+    <string name="heir_card_title">Erbe</string>
+    <string name="heir_none_hint">Noch kein Erbe — die erste Wiedergeburt krönt einen.</string>
+    <string name="heir_name_and_trait">%1$s — %2$s</string>
+    <string name="heir_trait_diligent">Der Fleißige</string>
+    <string name="heir_trait_diligent_desc">+8% Gesamtproduktion.</string>
+    <string name="heir_trait_frugal">Der Genügsame</string>
+    <string name="heir_trait_frugal_desc">-8% Gebäudekosten.</string>
+    <string name="heir_trait_vigilant">Der Wachsame</string>
+    <string name="heir_trait_vigilant_desc">-15% Wachstum des Verfalls.</string>
+    <string name="heir_trait_wise">Der Weise</string>
+    <string name="heir_trait_wise_desc">+10% Chroniken aus dem Verfall.</string>
+    <string name="heir_trait_sociable">Der Gesellige</string>
+    <string name="heir_trait_sociable_desc">+20% Einfluss-Einkommen.</string>
+    <string name="heir_trait_strong">Der Kräftige</string>
+    <string name="heir_trait_strong_desc">+15% Tipp-Ertrag.</string>
+
+    <string name="quests_title">Aufträge</string>
+    <string name="quest_reward_label">Belohnung</string>
+    <string name="quest_claim_button">Einlösen</string>
+    <string name="quests_empty_hint">Gerade keine offenen Aufträge.</string>
+
+    <string name="quest_first_building">Erstes Gebäude</string>
+    <string name="quest_fifty_gold">Fünfzig Gold</string>
+    <string name="quest_reach_village">Dorfgründung</string>
+    <string name="quest_ten_levels">Wachsende Gebäude</string>
+    <string name="quest_milestone_building">Grundstein gelegt</string>
+    <string name="quest_first_verfall">Erster Verfall</string>
+    <string name="quest_academy_level_three">Eifriger Schüler</string>
+    <string name="quest_five_achievements">Schon sagenumwoben</string>
+    <string name="quest_reach_age_five">Aufstieg der Freien Stadt</string>
+    <string name="quest_first_wiedergeburt">Sage geboren</string>
+    <string name="quest_dynasty_level_five">Gunst des Hofes</string>
+    <string name="quest_three_high_levels">Ausgewogenes Reich</string>
+
+    <string name="dynasty_switch_cooldown_hint">Nächster Wechsel in %1$s</string>
 </resources>

@@ -204,6 +204,50 @@ fun lerpColor(a: Color, b: Color, t: Double): Color {
     )
 }
 
+/** Stable per-cell noise (0f..1f) — the dissolve pattern behind [PixelArt.corrupted]. */
+private fun corruptionNoise(x: Int, y: Int): Float {
+    var h = x * 374761393 + y * 668265263
+    h = (h xor (h shr 13)) * 1274126177
+    h = h xor (h shr 16)
+    return (h and 0x7FFFFFFF) / Int.MAX_VALUE.toFloat()
+}
+
+// Private-use codepoints so the corruption ramp's palette keys never collide with the
+// synthesized per-color keys assigned below (which start at SYNTH_CHAR_BASE).
+private val CORRUPTION_RAMP = String(charArrayOf(0xE000.toChar(), 0xE001.toChar(), 0xE002.toChar()))
+private const val SYNTH_CHAR_BASE = 0x100
+
+/**
+ * Dissolves [progress] (0f..1f) of this art into a dark corruption ramp. Ground and the left/right
+ * edges corrupt first, so the decay reads as creeping in from outside rather than a uniform fade.
+ * Built purely off the public [PixelArt.colorAt] API: every surviving pixel is re-keyed into a
+ * palette synthesized on the fly, so no access to the private cell grid is needed.
+ */
+fun PixelArt.corrupted(progress: Float): PixelArt {
+    if (progress <= 0f) return this
+    val p = progress.coerceIn(0f, 1f)
+    val colorToChar = mutableMapOf<Color, Char>()
+    var nextChar = SYNTH_CHAR_BASE
+    val newCells = Array(height) { y ->
+        CharArray(width) { x ->
+            val base = colorAt(x, y) ?: return@CharArray '.'
+            val groundBias = ((y - height * 0.55f) / (height * 0.45f)).coerceIn(0f, 1f)
+            val edgeBias = 1f - (min(x, width - 1 - x).toFloat() / (width * 0.25f)).coerceIn(0f, 1f)
+            val bias = max(groundBias, edgeBias) * 0.6f
+            val threshold = (corruptionNoise(x, y) - bias).coerceIn(0f, 1f)
+            if (threshold >= p) {
+                colorToChar.getOrPut(base) { (nextChar++).toChar() }
+            } else {
+                val depth = (1f - threshold / p.coerceAtLeast(0.001f)).coerceIn(0f, 1f)
+                CORRUPTION_RAMP[(depth * (CORRUPTION_RAMP.length - 1)).roundToInt()]
+            }
+        }
+    }
+    val palette = colorToChar.entries.associate { (color, char) -> char to color } +
+        rampPalette(CORRUPTION_RAMP, Ramps.CorruptionDark, Ramps.CorruptionLight)
+    return PixelArt(width, height, newCells, palette)
+}
+
 /** Rasterizes the art once into a real bitmap so it can be blitted nearest-neighbor. */
 fun PixelArt.toImageBitmap(): ImageBitmap {
     val bitmap = ImageBitmap(width, height)

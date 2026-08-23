@@ -3,7 +3,11 @@ package com.embercrown.game.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -77,20 +81,33 @@ import com.embercrown.game.game.AchievementDefinition
 import com.embercrown.game.game.AgeDefinition
 import com.embercrown.game.game.AppGraph
 import com.embercrown.game.game.BuildingDefinition
+import com.embercrown.game.game.ChronicleEntry
+import com.embercrown.game.game.ChronicleEntryType
 import com.embercrown.game.game.DynastyPath
+import com.embercrown.game.game.HeirTraitDefinition
+import com.embercrown.game.game.DYNASTY_SWITCH_COOLDOWN_SECONDS
 import com.embercrown.game.game.GameEvent
 import com.embercrown.game.game.GameState
+import com.embercrown.game.game.MILESTONE_LEVELS
 import com.embercrown.game.game.MIN_LIFETIME_GOLD_FOR_VERFALL
 import com.embercrown.game.game.MIN_VERFALL_COUNT_FOR_WIEDERGEBURT
+import com.embercrown.game.game.OfflineReport
+import com.embercrown.game.game.QuestDefinition
+import com.embercrown.game.game.RatssaalUpgradeDefinition
+import com.embercrown.game.game.SynergyDefinition
+import com.embercrown.game.game.WonderDefinition
 import com.embercrown.game.game.achievementMultiplier
 import com.embercrown.game.game.academyMultiplier
 import com.embercrown.game.game.academyUpgradeCost
 import com.embercrown.game.game.bulkBuildingCost
 import com.embercrown.game.game.buildingProduction
 import com.embercrown.game.game.chroniclePointsForVerfall
+import com.embercrown.game.game.influenceProduction
 import com.embercrown.game.game.isBuildingUnlocked
 import com.embercrown.game.game.legacyUpgradeCost
 import com.embercrown.game.game.maxAffordableQuantity
+import com.embercrown.game.game.milestoneMultiplier
+import com.embercrown.game.game.nowEpochSeconds
 import com.embercrown.game.game.sagenForWiedergeburt
 import com.embercrown.game.i18n.LocalAppLocale
 import com.embercrown.game.game.totalProduction
@@ -104,8 +121,13 @@ import com.embercrown.game.ui.pixelart.PixelSwitch
 import com.embercrown.game.ui.pixelart.ageSceneArt
 import com.embercrown.game.ui.pixelart.buildingIcon
 import com.embercrown.game.ui.pixelart.chroniclePointsIcon
+import com.embercrown.game.ui.pixelart.corrupted
+import com.embercrown.game.ui.pixelart.einflussIcon
 import com.embercrown.game.ui.pixelart.goldIcon
+import com.embercrown.game.ui.pixelart.heirEmblemIcon
+import com.embercrown.game.ui.pixelart.omenIcon
 import com.embercrown.game.ui.pixelart.pixelEdgeLine
+import com.embercrown.game.ui.pixelart.Ramps
 import com.embercrown.game.ui.pixelart.pixelFrame
 import com.embercrown.game.ui.pixelart.sagenIcon
 import com.embercrown.game.resources.Res
@@ -116,20 +138,43 @@ import com.embercrown.game.resources.academy_upgrade_button
 import com.embercrown.game.resources.ages_title
 import com.embercrown.game.resources.app_name
 import com.embercrown.game.resources.buildings_title
+import com.embercrown.game.resources.building_synergy_hint
 import com.embercrown.game.resources.buy_multiplier_label
+import com.embercrown.game.resources.chronicle_card_title
+import com.embercrown.game.resources.chronicle_empty_hint
 import com.embercrown.game.resources.chronicle_points_label
+import com.embercrown.game.resources.dragon_buff_badge
 import com.embercrown.game.resources.dynasty_path_activate_button
 import com.embercrown.game.resources.dynasty_path_invest_button
 import com.embercrown.game.resources.dynasty_path_level_label
+import com.embercrown.game.resources.dynasty_switch_cooldown_hint
 import com.embercrown.game.resources.dynasty_switch_hint
 import com.embercrown.game.resources.dynasty_title
+import com.embercrown.game.resources.einfluss_label
 import com.embercrown.game.resources.footer_new_label
 import com.embercrown.game.resources.gold_label
+import com.embercrown.game.resources.heir_card_title
+import com.embercrown.game.resources.heir_name_and_trait
+import com.embercrown.game.resources.heir_none_hint
 import com.embercrown.game.resources.legends_label
 import com.embercrown.game.resources.locked_group_from
 import com.embercrown.game.resources.locked_group_label
 import com.embercrown.game.resources.locked_section_title
+import com.embercrown.game.resources.milestone_hint_label
 import com.embercrown.game.resources.next_age_label
+import com.embercrown.game.resources.offline_flavor_long
+import com.embercrown.game.resources.offline_flavor_medium
+import com.embercrown.game.resources.offline_flavor_short
+import com.embercrown.game.resources.offline_report_body
+import com.embercrown.game.resources.offline_report_dismiss_button
+import com.embercrown.game.resources.offline_report_title
+import com.embercrown.game.resources.quest_claim_button
+import com.embercrown.game.resources.quest_reward_label
+import com.embercrown.game.resources.quests_empty_hint
+import com.embercrown.game.resources.quests_title
+import com.embercrown.game.resources.ratssaal_buy_button
+import com.embercrown.game.resources.ratssaal_owned_label
+import com.embercrown.game.resources.ratssaal_title
 import com.embercrown.game.resources.reign_tab_achievements
 import com.embercrown.game.resources.reign_tab_system
 import com.embercrown.game.resources.reign_title
@@ -149,8 +194,8 @@ import com.embercrown.game.resources.system_import_error
 import com.embercrown.game.resources.system_save_button_short
 import com.embercrown.game.resources.tab_holdings
 import com.embercrown.game.resources.tab_reign
-import com.embercrown.game.resources.tap_button
 import com.embercrown.game.resources.verfall_button
+import com.embercrown.game.resources.verfall_corruption_label
 import com.embercrown.game.resources.verfall_description
 import com.embercrown.game.resources.verfall_locked_hint
 import com.embercrown.game.resources.verfall_survived_short
@@ -159,6 +204,10 @@ import com.embercrown.game.resources.verfalls_label
 import com.embercrown.game.resources.wiedergeburt_button
 import com.embercrown.game.resources.wiedergeburt_locked_hint
 import com.embercrown.game.resources.wiedergeburt_title
+import com.embercrown.game.resources.wonder_build_button
+import com.embercrown.game.resources.wonder_built_label
+import com.embercrown.game.resources.wonder_locked_hint
+import com.embercrown.game.resources.wonders_title
 import com.embercrown.game.update.autoUpdateIfNeeded
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
@@ -209,18 +258,33 @@ fun App() {
     LaunchedEffect(uiSettings.masterVolume, uiSettings.muted) {
         AppGraph.soundPlayer.setVolume(uiSettings.masterVolume)
         AppGraph.soundPlayer.setMuted(uiSettings.muted)
-        AppGraph.musicPlayer.setVolume(uiSettings.masterVolume)
-        AppGraph.musicPlayer.setMuted(uiSettings.muted)
     }
     // Starts once and loops forever at the app root, same reasoning as the root-level event
     // collector below: PhoneLayout's destinations dispose/recreate on tab switch, so playback
     // can't live there without cutting out and restarting every time the user changes tabs.
-    LaunchedEffect(Unit) { AppGraph.musicPlayer.play() }
+    // Both loops start together — musicPlayer and corruptedMusicPlayer are volume-crossfaded
+    // against each other below (keyed on state.corruption) rather than swapped, so both must
+    // always be playing.
+    LaunchedEffect(Unit) {
+        AppGraph.musicPlayer.play()
+        AppGraph.corruptedMusicPlayer.play()
+    }
     CompositionLocalProvider(LocalAppLocale provides uiSettings.language) {
         key(uiSettings.language) {
             MaterialTheme(colorScheme = EmbercrownColors) {
                 Surface(color = EmberBackground) {
                     val state by AppGraph.engine.state.collectAsState()
+                    // Continuous crossfade, not a discrete swap: as Verfall corruption rises,
+                    // musicPlayer fades out while corruptedMusicPlayer fades in — both loops
+                    // already playing (see the LaunchedEffect above), so this only ever touches
+                    // setVolume, which every platform's MusicPlayer already implements.
+                    LaunchedEffect(state.corruption, uiSettings.masterVolume, uiSettings.muted) {
+                        val t = state.corruption.toFloat()
+                        AppGraph.musicPlayer.setVolume(uiSettings.masterVolume * (1f - t))
+                        AppGraph.musicPlayer.setMuted(uiSettings.muted)
+                        AppGraph.corruptedMusicPlayer.setVolume(uiSettings.masterVolume * t)
+                        AppGraph.corruptedMusicPlayer.setMuted(uiSettings.muted)
+                    }
                     var multiplier by remember { mutableStateOf(BuyMultiplier.X1) }
                     var achievementToastId by remember { mutableStateOf<String?>(null) }
                     var ageUpCelebration by remember { mutableStateOf(false) }
@@ -251,6 +315,8 @@ fun App() {
                         }
                     }
 
+                    val offlineReport by AppGraph.engine.offlineReport.collectAsState()
+
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         if (maxWidth >= 700.dp) {
                             DesktopLayout(state = state, multiplier = multiplier, onMultiplierChange = { multiplier = it })
@@ -259,6 +325,7 @@ fun App() {
                         }
                         AgeUpCelebration(visible = ageUpCelebration, modifier = Modifier.matchParentSize())
                         AchievementToast(achievementId = achievementToastId, modifier = Modifier.align(Alignment.TopCenter))
+                        OfflineReportDialog(report = offlineReport, modifier = Modifier.matchParentSize())
                     }
                 }
             }
@@ -270,10 +337,24 @@ private fun sfxFor(event: GameEvent): SfxId? = when (event) {
     is GameEvent.GoldTapped -> SfxId.TAP
     is GameEvent.PurchaseSucceeded -> SfxId.PURCHASE
     is GameEvent.PurchaseDenied -> SfxId.DENY
+    is GameEvent.BuildingMilestoneReached -> SfxId.ACHIEVEMENT
     GameEvent.AcademyStudySucceeded -> SfxId.PURCHASE
     GameEvent.AcademyStudyDenied -> SfxId.DENY
     is GameEvent.AchievementUnlocked -> SfxId.ACHIEVEMENT
     is GameEvent.AgeAdvanced -> SfxId.AGE_UP
+    GameEvent.DragonBuffActivated -> SfxId.DRAGON
+    is GameEvent.RatssaalUpgradePurchased -> SfxId.PURCHASE
+    is GameEvent.RatssaalUpgradeDenied -> SfxId.DENY
+    is GameEvent.QuestClaimed -> SfxId.ACHIEVEMENT
+    is GameEvent.QuestClaimDenied -> SfxId.DENY
+    GameEvent.DynastySwitchDenied -> SfxId.DENY
+    // No dedicated sting yet — audio for the corruption system is a deliberate follow-up, not
+    // part of this pass (see the CorruptionPeaked doc comment in GameEngine.kt).
+    GameEvent.CorruptionPeaked -> null
+    is GameEvent.WonderBuilt -> SfxId.PURCHASE
+    is GameEvent.WonderBuildDenied -> SfxId.DENY
+    GameEvent.OmenBuffActivated -> SfxId.OMEN
+    GameEvent.OmenMalusActivated -> SfxId.OMEN
 }
 
 @Composable
@@ -321,6 +402,83 @@ private fun AchievementToast(achievementId: String?, modifier: Modifier = Modifi
     }
 }
 
+/** A flavor line for the offline report, purely ephemeral — not written into the persisted Chronicle. */
+private fun offlineFlavorLine(report: OfflineReport): StringResource = when {
+    report.elapsedSeconds < 600L -> Res.string.offline_flavor_short
+    report.elapsedSeconds < 7200L -> Res.string.offline_flavor_medium
+    else -> Res.string.offline_flavor_long
+}
+
+@Composable
+private fun OfflineReportDialog(report: OfflineReport?, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = report != null,
+        modifier = modifier,
+        enter = fadeIn(tween(200)),
+        exit = fadeOut(tween(200)),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(EmberBackground.copy(alpha = 0.75f)).clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { AppGraph.engine.acknowledgeOfflineReport() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 320.dp)
+                    .pixelFrame(fill = EmberPanel, bevelLight = EmberPanelLight)
+                    .padding(20.dp)
+                    // Swallows taps so tapping inside the card doesn't fall through to the
+                    // full-screen scrim's dismiss handler above.
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(stringResource(Res.string.offline_report_title), color = EmberGoldBright, fontSize = 14.sp, fontFamily = pixelFontFamily())
+                if (report != null) {
+                    Text(
+                        stringResource(Res.string.offline_report_body, formatOfflineDuration(report.elapsedSeconds), formatAmount(report.goldGained)),
+                        color = EmberGold.copy(alpha = 0.85f),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                    Text(
+                        stringResource(offlineFlavorLine(report)),
+                        color = EmberDim,
+                        fontSize = 11.sp,
+                        fontStyle = FontStyle.Italic,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                PixelButton(
+                    onClick = { AppGraph.engine.acknowledgeOfflineReport() },
+                    bevelLight = EmberAccentBright,
+                    modifier = Modifier.fillMaxWidth().height(44.dp).padding(top = 16.dp),
+                ) {
+                    Text(stringResource(Res.string.offline_report_dismiss_button), fontFamily = pixelFontFamily(), fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+private fun formatOfflineDuration(totalSeconds: Long): String {
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "${totalSeconds}s"
+    }
+}
+
+private fun formatCooldown(totalSeconds: Long): String {
+    val clamped = totalSeconds.coerceAtLeast(0L)
+    val minutes = clamped / 60
+    val seconds = clamped % 60
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
+}
+
 // ---------------------------------------------------------------------------------------------
 // Phone (< 700 dp)
 // ---------------------------------------------------------------------------------------------
@@ -337,9 +495,7 @@ private fun PhoneLayout(state: GameState, multiplier: BuyMultiplier, onMultiplie
             height = 132.dp,
             nameFontSize = 15.sp,
             showChronicle = false,
-            clickButtonHeight = 44.dp,
-            clickButtonFontSize = 12.sp,
-            clickButtonPaddingH = 16.dp,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
         ProgressRow(state = state, horizontalPadding = 12.dp, verticalPadding = 9.dp, showAbsoluteValues = false)
 
@@ -354,9 +510,14 @@ private fun PhoneLayout(state: GameState, multiplier: BuyMultiplier, onMultiplie
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        QuestsCard(state)
                         VerfallCard(state)
                         AcademyCard(state)
                         DynastyCard(state)
+                        HeirCard(state)
+                        RatssaalCard(state)
+                        WondersCard(state)
+                        ChronicleCard(state)
                     }
                 PhoneDestination.ACHIEVEMENTS ->
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
@@ -387,7 +548,19 @@ private fun CurrencyHeaderPhone(state: GameState) {
                 PixelArtImage(remember { goldIcon() }, modifier = Modifier.size(26.dp))
                 Text(formatAmount(state.gold), color = EmberGold, fontSize = 20.sp, fontFamily = pixelFontFamily(), modifier = Modifier.padding(start = 8.dp))
             }
-            Text("+${formatAmount(totalProduction(state))}/s", color = EmberGoldBright, fontSize = 11.sp, fontFamily = pixelFontFamily())
+            if (state.dragonBuffTicksRemaining > 0) {
+                Box(modifier = Modifier.pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)) {
+                    Text(
+                        stringResource(Res.string.dragon_buff_badge, state.dragonBuffTicksRemaining),
+                        color = EmberWhite,
+                        fontSize = 9.sp,
+                        fontFamily = pixelFontFamily(),
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                    )
+                }
+            } else {
+                Text("+${formatAmount(totalProduction(state))}/s", color = EmberGoldBright, fontSize = 11.sp, fontFamily = pixelFontFamily())
+            }
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconValueLabel(
@@ -407,6 +580,16 @@ private fun CurrencyHeaderPhone(state: GameState) {
                 valueColor = EmberGold.copy(alpha = 0.85f),
                 valueFontSize = 12.sp,
                 label = stringResource(Res.string.legends_label),
+                labelFontSize = 11.sp,
+                modifier = Modifier.padding(end = 14.dp),
+            )
+            IconValueLabel(
+                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
+                iconSize = 16.dp,
+                value = formatAmount(state.einfluss),
+                valueColor = EmberGold.copy(alpha = 0.85f),
+                valueFontSize = 12.sp,
+                label = stringResource(Res.string.einfluss_label),
                 labelFontSize = 11.sp,
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -497,9 +680,7 @@ private fun DesktopLayout(state: GameState, multiplier: BuyMultiplier, onMultipl
                     height = 220.dp,
                     nameFontSize = 18.sp,
                     showChronicle = true,
-                    clickButtonHeight = 48.dp,
-                    clickButtonFontSize = 13.sp,
-                    clickButtonPaddingH = 22.dp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 ProgressRow(state = state, horizontalPadding = 16.dp, verticalPadding = 10.dp, showAbsoluteValues = true)
                 Column(
@@ -546,6 +727,17 @@ private fun CurrencyHeaderDesktop(state: GameState) {
                 fontFamily = pixelFontFamily(),
                 modifier = Modifier.padding(start = 4.dp),
             )
+            if (state.dragonBuffTicksRemaining > 0) {
+                Box(modifier = Modifier.padding(start = 10.dp).pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)) {
+                    Text(
+                        stringResource(Res.string.dragon_buff_badge, state.dragonBuffTicksRemaining),
+                        color = EmberWhite,
+                        fontSize = 10.sp,
+                        fontFamily = pixelFontFamily(),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                    )
+                }
+            }
         }
         Spacer(modifier = Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -565,6 +757,15 @@ private fun CurrencyHeaderDesktop(state: GameState) {
                 valueColor = EmberGold,
                 valueFontSize = 13.sp,
                 label = stringResource(Res.string.legends_label),
+                labelFontSize = 11.sp,
+            )
+            IconValueLabel(
+                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
+                iconSize = 20.dp,
+                value = formatAmount(state.einfluss),
+                valueColor = EmberGold,
+                valueFontSize = 13.sp,
+                label = stringResource(Res.string.einfluss_label),
                 labelFontSize = 11.sp,
             )
             ValueLabel(
@@ -652,9 +853,14 @@ private fun ReichColumn(state: GameState, modifier: Modifier = Modifier) {
                 .padding(bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            QuestsCard(state)
             VerfallCard(state)
             AcademyCard(state)
             DynastyCard(state)
+            HeirCard(state)
+            RatssaalCard(state)
+            WondersCard(state)
+            ChronicleCard(state)
             AchievementsBlock(state)
             RulesSystemBlock(state)
         }
@@ -673,9 +879,7 @@ private fun SceneBanner(
     height: Dp,
     nameFontSize: TextUnit,
     showChronicle: Boolean,
-    clickButtonHeight: Dp,
-    clickButtonFontSize: TextUnit,
-    clickButtonPaddingH: Dp,
+    modifier: Modifier = Modifier,
 ) {
     val age = state.currentAge
     val sidePadding = if (showChronicle) 16.dp else 12.dp
@@ -699,7 +903,18 @@ private fun SceneBanner(
     }
 
     Box(
-        modifier = Modifier
+        // Capped, not fillMaxWidth() alone: the age-scene art is a low-res pixel grid (~33x15)
+        // designed around a ~2.2:1 aspect ratio. On a maximized/ultra-wide window the middle
+        // column can get far wider than that, and PixelFit.Cover would then blow individual
+        // pixel blocks up hugely while cropping most of the vertical composition away to fill
+        // it — capping the banner's own width keeps it at a sane, designed crop regardless of
+        // window width, with the surrounding column background framing it instead.
+        modifier = modifier
+            // widthIn BEFORE fillMaxWidth, not after: fillMaxWidth first would report a tight,
+            // already-fixed size to its parent that a later widthIn can no longer shrink — the
+            // cap only works as the outer (first) constraint, narrowing what fillMaxWidth then
+            // fills completely.
+            .widthIn(max = 760.dp)
             .fillMaxWidth()
             .height(height)
             .pixelEdgeLine(PixelEdge.Bottom)
@@ -709,13 +924,27 @@ private fun SceneBanner(
         // Crossfade, not a direct swap: the age scene art changes shape/palette a lot between
         // ages (see AgeScene's dawn-brown -> radiant-gold ramp), so an instant cut on age-up
         // reads as a jarring flash rather than the world visibly aging.
+        // Bucketed into 40 steps rather than read as a raw Double: corruption crawls over 25
+        // minutes, so re-rasterizing the full 160x72 grid every second (the tick interval) would
+        // be wasted work for a change too small to see — this redraws only every ~40s of ramp.
+        val corruptionBucket = (state.corruption * 40).roundToInt()
         Crossfade(targetState = age.index, animationSpec = tween(600), modifier = Modifier.fillMaxSize()) { index ->
             PixelArtImage(
-                art = remember(index) { ageSceneArt(index, AgeDefinition.all.size) },
+                art = remember(index, corruptionBucket) {
+                    val base = ageSceneArt(index, AgeDefinition.all.size)
+                    if (corruptionBucket <= 0) base else base.corrupted(corruptionBucket / 40f)
+                },
                 modifier = Modifier.fillMaxSize(),
                 fit = PixelFit.Cover,
             )
         }
+
+        Box(modifier = Modifier.align(Alignment.Center)) {
+            floatingNumbers.forEach { number ->
+                FloatingGoldNumberText(number = number, onFinished = { floatingNumbers.remove(number) })
+            }
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -760,23 +989,54 @@ private fun SceneBanner(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = sidePadding, bottom = bottomPadding)
-                .height(clickButtonHeight)
-                .scale(tapScale.value)
-                .clickable { onTap() }
-                .pixelFrame(fill = EmberAccent, borderWidth = 2.dp, bevelLight = EmberAccentBright)
-                .padding(horizontal = clickButtonPaddingH),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(stringResource(Res.string.tap_button), color = EmberWhite, fontSize = clickButtonFontSize, fontFamily = pixelFontFamily())
+        // Drachenüberflug: a tappable sighting that appears briefly and, if tapped in time,
+        // activates a timed production buff. Its own clickable consumes the tap so it doesn't
+        // also fall through to the click-for-gold handler on the Box below it.
+        if (state.dragonAvailableTicksRemaining > 0) {
+            val pulse = rememberInfiniteTransition(label = "dragonPulse")
+            val pulseScale by pulse.animateFloat(
+                initialValue = 0.9f,
+                targetValue = 1.08f,
+                animationSpec = infiniteRepeatable(animation = tween(500), repeatMode = RepeatMode.Reverse),
+                label = "dragonPulseScale",
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .size(40.dp)
+                    .scale(pulseScale)
+                    .pixelFrame(fill = EmberAccent, bevelLight = EmberAccentBright)
+                    .clickable { AppGraph.engine.tapDragonEvent() },
+                contentAlignment = Alignment.Center,
+            ) {
+                val dragonIcon = remember { buildingIcon("dragon_hoard") }
+                if (dragonIcon != null) PixelArtImage(dragonIcon, modifier = Modifier.size(28.dp))
+            }
         }
 
-        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(end = sidePadding, bottom = bottomPadding + clickButtonHeight + 6.dp)) {
-            floatingNumbers.forEach { number ->
-                FloatingGoldNumberText(number = number, onFinished = { floatingNumbers.remove(number) })
+        // Verfall Omen: same tappable-sighting pattern as the Dragon above, but only rolls while
+        // corruption is building, and its effect is a coin flip (short buff OR short malus) rather
+        // than always positive — placed at the opposite corner so the two never overlap.
+        if (state.omenAvailableTicksRemaining > 0) {
+            val pulse = rememberInfiniteTransition(label = "omenPulse")
+            val pulseScale by pulse.animateFloat(
+                initialValue = 0.9f,
+                targetValue = 1.08f,
+                animationSpec = infiniteRepeatable(animation = tween(500), repeatMode = RepeatMode.Reverse),
+                label = "omenPulseScale",
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+                    .size(40.dp)
+                    .scale(pulseScale)
+                    .pixelFrame(fill = EmberPanel, bevelLight = Ramps.CorruptionLight)
+                    .clickable { AppGraph.engine.tapOmenEvent() },
+                contentAlignment = Alignment.Center,
+            ) {
+                PixelArtImage(remember { omenIcon() }, modifier = Modifier.size(28.dp))
             }
         }
     }
@@ -1020,8 +1280,8 @@ private fun VolumeBar(volume: Float, onVolumeChange: (Float) -> Unit, modifier: 
 @Composable
 private fun BuildingRow(state: GameState, definition: BuildingDefinition, multiplier: BuyMultiplier) {
     val level = state.buildingLevel(definition.id)
-    val quantity = multiplier.quantity ?: maxAffordableQuantity(definition, level, state.gold)
-    val cost = bulkBuildingCost(definition, level, quantity.coerceAtLeast(1))
+    val quantity = multiplier.quantity ?: maxAffordableQuantity(definition, level, state.gold, state)
+    val cost = bulkBuildingCost(definition, level, quantity.coerceAtLeast(1), state)
     val canAfford = quantity > 0 && state.gold >= cost
 
     val shakeX = remember { Animatable(0f) }
@@ -1046,8 +1306,22 @@ private fun BuildingRow(state: GameState, definition: BuildingDefinition, multip
                     shakeX.animateTo(-8f, tween(80))
                     shakeX.animateTo(0f, tween(60))
                 }
+                event is GameEvent.BuildingMilestoneReached && event.buildingId == definition.id -> {
+                    // Reuses the purchase flash/pop but bigger — a milestone crossing is a
+                    // purchase that also doubled the building's output, not a separate moment.
+                    launch {
+                        iconPop.snapTo(1.5f)
+                        iconPop.animateTo(1f, animationSpec = tween(320))
+                    }
+                }
             }
         }
+    }
+
+    val nextMilestone = remember(level) { MILESTONE_LEVELS.firstOrNull { it > level } }
+    val levelsById = remember(state) { state.buildings.associate { it.id to it.level } }
+    val incomingSynergies = remember(definition.id, levelsById) {
+        SynergyDefinition.forTarget(definition.id).filter { (levelsById[it.sourceId] ?: 0) > 0 }
     }
 
     Row(
@@ -1077,7 +1351,25 @@ private fun BuildingRow(state: GameState, definition: BuildingDefinition, multip
                     Text("×$level", color = EmberGoldBright, fontSize = 9.sp, fontFamily = pixelFontFamily())
                 }
             }
-            Text("${formatAmount(buildingProduction(definition, level))}/s", color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+            Text("${formatAmount(buildingProduction(definition, level, state))}/s", color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+            if (nextMilestone != null) {
+                Text(
+                    stringResource(Res.string.milestone_hint_label, nextMilestone, formatAmount(milestoneMultiplier(nextMilestone))),
+                    color = EmberDim.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
+            incomingSynergies.forEach { synergy ->
+                val sourceLevel = levelsById[synergy.sourceId] ?: 0
+                val bonusPct = (synergy.bonusPerLevel * sourceLevel).coerceAtMost(synergy.cap) * 100.0
+                Text(
+                    stringResource(Res.string.building_synergy_hint, formatAmount(bonusPct), stringResource(BuildingDefinition.byId(synergy.sourceId).nameRes)),
+                    color = EmberDim.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
         }
         Column(
             modifier = Modifier
@@ -1170,6 +1462,21 @@ private fun VerfallCard(state: GameState) {
                 )
             }
         }
+
+        if (canTrigger && state.corruption > 0.0) {
+            Column(modifier = Modifier.padding(top = 10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(Res.string.verfall_corruption_label), color = EmberDim, fontSize = 10.sp)
+                    Text("${(state.corruption * 100).roundToInt()}%", color = EmberAccentBright, fontSize = 10.sp, fontFamily = pixelFontFamily())
+                }
+                PixelSegmentedBar(
+                    progress = state.corruption.toFloat(),
+                    segments = 20,
+                    filledColor = EmberAccentBright,
+                    modifier = Modifier.fillMaxWidth().height(10.dp).padding(top = 4.dp),
+                )
+            }
+        }
     }
 }
 
@@ -1231,14 +1538,39 @@ private fun AcademyCard(state: GameState) {
 
 @Composable
 private fun DynastyCard(state: GameState) {
-    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+    // Ticks once a second purely to recompute the switch cooldown countdown below — the rest of
+    // the card only depends on `state`, which already recomposes on its own.
+    var now by remember { mutableStateOf(nowEpochSeconds()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            now = nowEpochSeconds()
+        }
+    }
+    val cooldownRemaining = (state.lastDynastySwitchEpochSeconds + DYNASTY_SWITCH_COOLDOWN_SECONDS - now).coerceAtLeast(0L)
+
+    val shakeX = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        AppGraph.engine.events.filterIsInstance<GameEvent.DynastySwitchDenied>().collect {
+            shakeX.snapTo(0f)
+            shakeX.animateTo(8f, tween(40))
+            shakeX.animateTo(-8f, tween(80))
+            shakeX.animateTo(0f, tween(60))
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).pixelFrame().padding(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Text(stringResource(Res.string.dynasty_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
-            Text(stringResource(Res.string.dynasty_switch_hint), color = EmberDim, fontSize = 11.sp)
+            Text(
+                if (cooldownRemaining > 0) stringResource(Res.string.dynasty_switch_cooldown_hint, formatCooldown(cooldownRemaining)) else stringResource(Res.string.dynasty_switch_hint),
+                color = EmberDim,
+                fontSize = 11.sp,
+            )
         }
 
         Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            DynastyPath.entries.forEach { path -> DynastyPathRow(state, path) }
+            DynastyPath.entries.forEach { path -> DynastyPathRow(state, path, cooldownActive = cooldownRemaining > 0) }
         }
 
         Column(
@@ -1283,8 +1615,43 @@ private fun DynastyCard(state: GameState) {
     }
 }
 
+/** A small heraldic block naming the current life's Heir — rolled fresh at each Wiedergeburt. */
 @Composable
-private fun DynastyPathRow(state: GameState, path: DynastyPath) {
+private fun HeirCard(state: GameState) {
+    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+        Text(stringResource(Res.string.heir_card_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+        val heirId = state.currentHeirId
+        if (heirId == null) {
+            Text(
+                stringResource(Res.string.heir_none_hint),
+                color = EmberDim,
+                fontSize = 11.sp,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        } else {
+            val trait = HeirTraitDefinition.byId(heirId)
+            Row(modifier = Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                PixelArtImage(
+                    art = remember(heirId) { heirEmblemIcon(trait.effectType) },
+                    modifier = Modifier.size(32.dp),
+                )
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Text(
+                        stringResource(Res.string.heir_name_and_trait, state.currentHeirName, stringResource(trait.nameRes)),
+                        color = EmberGoldBright,
+                        fontSize = 13.sp,
+                        fontFamily = pixelFontFamily(),
+                    )
+                    Text(stringResource(trait.descriptionRes), color = EmberDim, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DynastyPathRow(state: GameState, path: DynastyPath, cooldownActive: Boolean) {
     val level = state.legacyLevels[path] ?: 0
     val isActive = state.activeDynastyPath == path
     val cost = legacyUpgradeCost(level)
@@ -1341,15 +1708,286 @@ private fun DynastyPathRow(state: GameState, path: DynastyPath) {
             Row(
                 modifier = Modifier
                     .height(36.dp)
-                    .pixelFrame(fill = EmberPanelLight)
+                    .pixelFrame(fill = if (cooldownActive) EmberPanelLight.copy(alpha = 0.5f) else EmberPanelLight)
+                    // Always enabled — see the equivalent comment on BuildingRow's buy click;
+                    // the engine itself gates the cooldown and fires a deny event/shake.
                     .clickable { AppGraph.engine.setActiveDynastyPath(path) }
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(Res.string.dynasty_path_activate_button), color = EmberGold, fontSize = 10.sp, fontFamily = pixelFontFamily())
+                Text(
+                    stringResource(Res.string.dynasty_path_activate_button),
+                    color = if (cooldownActive) EmberDim else EmberGold,
+                    fontSize = 10.sp,
+                    fontFamily = pixelFontFamily(),
+                )
             }
         }
     }
+}
+
+@Composable
+private fun QuestsCard(state: GameState) {
+    val openQuests = remember(state.claimedQuestIds) {
+        QuestDefinition.all.filter { it.id !in state.claimedQuestIds }.take(3)
+    }
+    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+        Text(stringResource(Res.string.quests_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+        if (openQuests.isEmpty()) {
+            Text(
+                stringResource(Res.string.quests_empty_hint),
+                color = EmberDim,
+                fontSize = 11.sp,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        } else {
+            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                openQuests.forEach { quest -> QuestRow(state, quest) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestRow(state: GameState, quest: QuestDefinition) {
+    val fulfilled = quest.condition(state)
+    Row(
+        modifier = Modifier.fillMaxWidth().background(EmberHeaderBar).padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(quest.nameRes),
+                color = if (fulfilled) EmberGoldBright else EmberGold.copy(alpha = 0.8f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "${stringResource(Res.string.quest_reward_label)}: ${formatAmount(quest.rewardGold)} ${stringResource(Res.string.gold_label)}",
+                color = EmberDim,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .height(36.dp)
+                .pixelFrame(
+                    fill = if (fulfilled) EmberAccent else EmberAccent.copy(alpha = 0.35f),
+                    bevelLight = EmberAccentBright,
+                )
+                // Always enabled — the engine decides eligibility, matching the rest of the UI.
+                .clickable { AppGraph.engine.claimQuest(quest.id) }
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(Res.string.quest_claim_button), color = EmberWhite, fontSize = 10.sp, fontFamily = pixelFontFamily())
+        }
+    }
+}
+
+@Composable
+private fun RatssaalCard(state: GameState) {
+    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+            Text(stringResource(Res.string.ratssaal_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+            IconValueLabel(
+                icon = { PixelArtImage(remember { einflussIcon() }, modifier = Modifier.fillMaxSize()) },
+                iconSize = 14.dp,
+                value = formatAmount(state.einfluss),
+                valueColor = EmberGoldBright,
+                valueFontSize = 11.sp,
+                label = stringResource(Res.string.einfluss_label),
+                labelFontSize = 10.sp,
+            )
+        }
+        Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            RatssaalUpgradeDefinition.all.forEach { upgrade -> RatssaalUpgradeRow(state, upgrade) }
+        }
+    }
+}
+
+@Composable
+private fun RatssaalUpgradeRow(state: GameState, upgrade: RatssaalUpgradeDefinition) {
+    val owned = upgrade.id in state.ratssaalUpgrades
+    val affordable = state.einfluss >= upgrade.cost
+
+    val shakeX = remember { Animatable(0f) }
+    LaunchedEffect(upgrade.id) {
+        AppGraph.engine.events.collect { event ->
+            if (event is GameEvent.RatssaalUpgradeDenied && event.id == upgrade.id) {
+                shakeX.snapTo(0f)
+                shakeX.animateTo(8f, tween(40))
+                shakeX.animateTo(-8f, tween(80))
+                shakeX.animateTo(0f, tween(60))
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).background(EmberHeaderBar).padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(upgrade.nameRes),
+                color = if (owned) EmberGoldBright else EmberGold.copy(alpha = 0.8f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                stringResource(upgrade.descriptionRes),
+                color = EmberDim,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        if (owned) {
+            Text(stringResource(Res.string.ratssaal_owned_label), color = EmberDim, fontSize = 10.sp, fontFamily = pixelFontFamily())
+        } else {
+            Row(
+                modifier = Modifier
+                    .height(36.dp)
+                    .pixelFrame(
+                        fill = if (affordable) EmberAccent else EmberAccent.copy(alpha = 0.35f),
+                        bevelLight = EmberAccentBright,
+                    )
+                    .clickable { AppGraph.engine.buyRatssaalUpgrade(upgrade.id) }
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(Res.string.ratssaal_buy_button, formatAmount(upgrade.cost)),
+                    color = EmberWhite,
+                    fontSize = 10.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WondersCard(state: GameState) {
+    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+        Text(stringResource(Res.string.wonders_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+        Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            WonderDefinition.all.forEach { wonder -> WonderRow(state, wonder) }
+        }
+    }
+}
+
+@Composable
+private fun WonderRow(state: GameState, wonder: WonderDefinition) {
+    val owned = wonder.id in state.ownedWonders
+    val unlocked = state.currentAge.index >= wonder.unlockAgeIndex
+    val affordable = state.gold >= wonder.cost
+
+    val shakeX = remember { Animatable(0f) }
+    LaunchedEffect(wonder.id) {
+        AppGraph.engine.events.collect { event ->
+            if (event is GameEvent.WonderBuildDenied && event.id == wonder.id) {
+                shakeX.snapTo(0f)
+                shakeX.animateTo(8f, tween(40))
+                shakeX.animateTo(-8f, tween(80))
+                shakeX.animateTo(0f, tween(60))
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().offset(x = shakeX.value.dp).background(EmberHeaderBar).padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(wonder.nameRes),
+                color = when {
+                    owned -> EmberGoldBright
+                    unlocked -> EmberGold.copy(alpha = 0.8f)
+                    else -> EmberDim
+                },
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                stringResource(wonder.descriptionRes),
+                color = EmberDim,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        when {
+            owned -> Text(stringResource(Res.string.wonder_built_label), color = EmberDim, fontSize = 10.sp, fontFamily = pixelFontFamily())
+            !unlocked -> Text(
+                stringResource(Res.string.wonder_locked_hint, stringResource(AgeDefinition.all[wonder.unlockAgeIndex].nameRes)),
+                color = EmberDim,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
+            )
+            else -> Row(
+                modifier = Modifier
+                    .height(36.dp)
+                    .pixelFrame(
+                        fill = if (affordable) EmberAccent else EmberAccent.copy(alpha = 0.35f),
+                        bevelLight = EmberAccentBright,
+                    )
+                    .clickable { AppGraph.engine.buyWonder(wonder.id) }
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(Res.string.wonder_build_button, formatAmount(wonder.cost)),
+                    color = EmberWhite,
+                    fontSize = 10.sp,
+                    fontFamily = pixelFontFamily(),
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChronicleCard(state: GameState) {
+    Column(modifier = Modifier.fillMaxWidth().pixelFrame().padding(12.dp)) {
+        Text(stringResource(Res.string.chronicle_card_title), color = EmberGold, fontSize = 12.sp, fontFamily = pixelFontFamily())
+        if (state.chronicle.isEmpty()) {
+            Text(
+                stringResource(Res.string.chronicle_empty_hint),
+                color = EmberDim,
+                fontSize = 11.sp,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        } else {
+            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                state.chronicle.asReversed().take(12).forEach { entry ->
+                    Text(chronicleEntryText(entry), color = EmberDim, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+/** Resolves one [ChronicleEntry] into display text, looking up nested resources (achievement/age names) by id. */
+@Composable
+private fun chronicleEntryText(entry: ChronicleEntry): String {
+    val type = ChronicleEntryType.byKind(entry.kind)
+    val args = when (entry.kind) {
+        "achievement_unlocked" -> listOf(stringResource(AchievementDefinition.byId(entry.args[0]).nameRes))
+        "age_advanced" -> listOf(stringResource(AgeDefinition.all[entry.args[0].toInt()].nameRes))
+        else -> entry.args
+    }
+    return stringResource(type.templateRes, *args.toTypedArray())
 }
 
 @Composable

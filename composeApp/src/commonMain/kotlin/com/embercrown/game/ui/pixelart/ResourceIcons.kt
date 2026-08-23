@@ -80,3 +80,33 @@ fun sagenIcon(): PixelArt {
         rampPalette(RB, Ramps.ClothDark, Ramps.ClothLight),
     )
 }
+
+/** A watching, dark eye in the corruption palette — the tappable sighting for a Verfall Omen. */
+fun omenIcon(): PixelArt {
+    val g = PixelGridBuilder(S, S)
+    g.ellipse(12, 12, 10, 6, '1')
+    g.ditherRamp('1', RA, radialFalloff(cx = 8f, cy = 9f, radius = 20f))
+    g.circle(12, 12, 5, '5')
+    g.ditherRamp('5', RB, radialFalloff(cx = 10f, cy = 10f, radius = 10f))
+    g.circle(12, 12, 2, 'z')
+    g.set(11, 11, HIGHLIGHT)
+    return g.finishFree(
+        rampPalette(RA, Ramps.CorruptionDark, Ramps.CorruptionLight),
+        rampPalette(RB, Color(0xFF120014), Color(0xFF6B2A78)),
+        mapOf('z' to EmberPalette.Ink),
+    )
+}
+
+/** A wax-sealed signet ring, used for Einfluss (Influence). */
+fun einflussIcon(): PixelArt {
+    val g = PixelGridBuilder(S, S)
+    g.ring(12, 12, 10, 7, '1')
+    g.ditherRamp('1', RA, radialFalloff(cx = 8f, cy = 8f, radius = 20f))
+    g.circle(12, 12, 5, '5')
+    g.ditherRamp('5', RB, radialFalloff(cx = 10f, cy = 10f, radius = 10f))
+    g.set(11, 11, HIGHLIGHT)
+    return g.finishFree(
+        rampPalette(RA, Ramps.ArcaneDark, Ramps.ArcaneLight),
+        rampPalette(RB, Color(0xFF3A1E5E), Color(0xFFB98EE8)),
+    )
+}

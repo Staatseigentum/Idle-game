@@ -1,0 +1,18 @@
+Goes in the "Short description or tagline" field on itch's Edit game page. itch uses it in
+listings, in search results, and as the page's meta description — so it should say what the game
+is, not just set a mood. Keep it on one line.
+
+PRIMARY (134 characters)
+
+Build a kingdom, lose it to the Blight, build it back stronger. A pixel-art idle game across
+eighteen ages. Very early in development.
+
+ALTERNATES
+
+Leans on the game's own tagline (147 characters):
+A pixel-art idle kingdom that never truly dies. Fall to the Blight, keep what the fall taught
+you, climb eighteen ages again. Early in development.
+
+Shortest, most matter-of-fact (119 characters):
+An idle kingdom-builder in dithered pixel art, where every collapse pays for the next crown.
+Very early in development.

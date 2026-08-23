@@ -1,6 +1,6 @@
 package com.embercrown.game.audio
 
-enum class SfxId { TAP, PURCHASE, DENY, ACHIEVEMENT, AGE_UP }
+enum class SfxId { TAP, PURCHASE, DENY, ACHIEVEMENT, AGE_UP, DRAGON, OMEN }
 
 /** Short chiptune-style one-shots, synthesized once at first use — no external audio assets. */
 object SoundBank {
@@ -11,6 +11,8 @@ object SoundBank {
             SfxId.DENY to denyClip(),
             SfxId.ACHIEVEMENT to achievementClip(),
             SfxId.AGE_UP to ageUpClip(),
+            SfxId.DRAGON to dragonClip(),
+            SfxId.OMEN to omenClip(),
         )
     }
 
@@ -40,4 +42,22 @@ object SoundBank {
                 tone(1046.5, 0.28, amplitude = 0.55),
             ),
         )
+
+    private fun dragonClip(): PcmClip {
+        val swoop = concat(
+            tone(196.0, 0.08, amplitude = 0.35),
+            tone(246.9, 0.08, amplitude = 0.4),
+            tone(329.6, 0.10, amplitude = 0.45),
+            tone(440.0, 0.14, amplitude = 0.5),
+        )
+        val wind = applyDecayEnvelope(noiseBurst(0.4, amplitude = 0.18), decaySeconds = 0.35)
+        return PcmClip(mix(swoop, wind))
+    }
+
+    /** A descending, unsettled two-tone with a faint hiss underneath — the Verfall Omen's sighting cue. */
+    private fun omenClip(): PcmClip {
+        val motif = concat(tone(233.1, 0.12, amplitude = 0.32), tone(174.6, 0.18, amplitude = 0.3))
+        val hiss = applyDecayEnvelope(noiseBurst(0.3, amplitude = 0.08), decaySeconds = 0.28)
+        return PcmClip(mix(motif, hiss))
+    }
 }
