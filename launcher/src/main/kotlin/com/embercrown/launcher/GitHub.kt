@@ -43,6 +43,7 @@ internal data class Asset(
     val name: String = "",
     @SerialName("browser_download_url") val downloadUrl: String = "",
     val size: Long = 0,
+    val digest: String? = null,
 )
 
 internal object GitHub {
@@ -93,7 +94,9 @@ internal object GitHub {
     private fun open(url: String): HttpURLConnection {
         var current = url
         repeat(5) {
-            val connection = (URL(current).openConnection() as HttpURLConnection).apply {
+            val target = URL(current)
+            require(target.protocol == "https") { "update URLs must use HTTPS" }
+            val connection = (target.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 10_000
                 readTimeout = 30_000

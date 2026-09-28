@@ -1,5 +1,32 @@
 # Embercrown changelog
 
+## 0.4.0 — The Eclipse Siege
+
+The kingdom has more to build, more to remember, and one last battle to survive.
+
+### A bigger journey
+
+- Follow eight Royal Orders for new goals and rewards throughout each reign.
+- Restore four city districts. As you improve them, new lights and banners appear in your animated kingdom.
+- Build permanent outposts in conquered Marches to strengthen your realm and speed up future expeditions.
+- Forge four Crown Artifacts from relics and fragments, then equip the two that suit your plans.
+- Choose from three optional Crown Trials for tougher future reigns and lasting rewards.
+- Face the Eclipse Siege: a three-stage endgame challenge with a climactic reward.
+
+### Achievements worth showing
+
+- The Crown Chronicle now holds 27 discoveries, including nine new ones. Every discovery adds a collectible pixel sigil.
+- Pick your favorite sigils for the trophy shelf and uncover new fragments of Embercrown's story.
+- Earn new flame colors, banners, skies and Marches map frames. On desktop, your pixel cursor matches your chosen flame.
+- Achievement rewards are now purely cosmetic. Discoveries no longer add relics to the Ash Ritual.
+
+### A smoother return to the realm
+
+- Desktop has a new Embercrown title bar and pixel cursor.
+- The desktop updater shows download progress, lets you play your installed version, and can fall back to it if an update fails. Android downloads are checked before installation.
+
+**Your save is safe:** Existing 0.3.x saves continue in 0.4.0. No reset is required.
+
 ## 0.3.0 — The Ash Kingdom
 
 This is a substantial rebuild of Embercrown around its original idle-kingdom idea.

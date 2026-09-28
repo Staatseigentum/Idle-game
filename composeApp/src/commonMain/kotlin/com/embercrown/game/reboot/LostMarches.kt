@@ -41,7 +41,11 @@ fun expeditionDuration(region: LostRegion, state: RebootState, roleId: String): 
     val role = when (roleId) { "scout" -> 0.7; "occultist" -> 1.25; else -> 1.0 }
     val pathfinder = if (state.specializations["moonforge"] == "utility") 0.8 else 1.0
     val relicSet = if (state.relicSetId == "wayfarer") 0.85 else 1.0
-    return ceil(region.expeditionSeconds * role * pathfinder * relicSet).toInt().coerceAtLeast(10)
+    val outpost = 1.0 - (state.outpostLevels[region.id] ?: 0) * 0.05
+    val compass = if (hasArtifact(state, "tide_compass")) 0.8 else 1.0
+    val trial = if (state.activeTrialId == "marches") 1.4 else 1.0
+    return ceil(region.expeditionSeconds * role * pathfinder * relicSet * outpost * compass * trial)
+        .toInt().coerceAtLeast(10)
 }
 
 fun beginExpedition(state: RebootState, regionId: String, roleId: String, daring: Boolean): RebootState {
@@ -65,7 +69,9 @@ fun expeditionReward(expedition: MarchExpedition, state: RebootState): Int {
         else -> 6
     }
     return base + (if (state.specializations["bonelibrary"] == "utility") 1 else 0) +
-        (if (state.relicSetId == "wayfarer") 1 else 0)
+        (if (state.relicSetId == "wayfarer") 1 else 0) +
+        (if (hasArtifact(state, "tide_compass")) 1 else 0) +
+        (if ("marches" in state.completedTrials) 1 else 0)
 }
 
 fun finishExpedition(state: RebootState): RebootState {
@@ -76,6 +82,7 @@ fun finishExpedition(state: RebootState): RebootState {
         expedition = null,
         fragments = state.fragments + (expedition.regionId to (state.fragments[expedition.regionId] ?: 0) + found),
         expeditionsCompleted = state.expeditionsCompleted + 1,
+        runExpeditions = state.runExpeditions + 1,
         lastExpeditionRegion = expedition.regionId,
         lastExpeditionReward = found,
     ))

@@ -14,7 +14,8 @@ private val mapPalette = mapOf(
 )
 
 /** All terrain and markers are drawn at native pixel resolution, then scaled without filtering. */
-fun lostMarchesArt(conquered: Set<String>): PixelArt {
+fun lostMarchesArt(conquered: Set<String>, outposts: Map<String, Int> = emptyMap(),
+                   frameLook: String = "iron"): PixelArt {
     val g = PixelGridBuilder(160, 112)
     g.rect(0, 0, 159, 111, 'a')
     g.ellipse(82, 63, 78, 54, 'b')
@@ -62,9 +63,28 @@ fun lostMarchesArt(conquered: Set<String>): PixelArt {
         g.rect(region.x - 2, region.y - 2, region.x + 2, region.y + 2,
             if (claimed) 'T' else 'x')
         g.set(region.x, region.y, if (claimed) 'Y' else 'X')
+        val outpostLevel = outposts[region.id] ?: 0
+        if (outpostLevel > 0) {
+            g.rect(region.x - 8, region.y + 8, region.x + 8, region.y + 9, 'o')
+            for (level in 0 until outpostLevel) {
+                val x = region.x - 6 + level * 5
+                g.rect(x, region.y + 5, x + 3, region.y + 8, 'T')
+                g.set(x + 1, region.y + 6, 'X')
+            }
+        }
     }
-    g.rectOutline(1, 1, 158, 110, 'f')
-    return g.build(mapPalette)
+    g.rectOutline(1, 1, 158, 110, if (frameLook == "iron") 'f' else 'j')
+    if (frameLook != "iron") {
+        g.rectOutline(3, 3, 156, 108, 'j')
+        listOf(4 to 4, 146 to 4, 4 to 98, 146 to 98).forEach { (x, y) ->
+            g.rect(x, y, x + 9, y + 9, 'j')
+            g.rect(x + 2, y + 2, x + 7, y + 7, 'J')
+            g.set(x + 4, y + 4, 'o')
+        }
+    }
+    val accent = if (frameLook == "gilded") Color(0xFFFFD784) else Color(0xFF78BDB4)
+    return g.build(mapPalette + mapOf('j' to (if (frameLook == "gilded") Color(0xFF8D6647)
+        else Color(0xFF426B70)), 'J' to accent))
 }
 
 fun lostMarchesMotionArt(frame: Int, expedition: MarchExpedition?): PixelArt {

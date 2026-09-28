@@ -58,8 +58,9 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
             val mapWidth = maxWidth.coerceAtMost(760.dp)
             Box(Modifier.width(mapWidth).height(mapWidth * 0.7f).clipToBounds()
                 .border(1.dp, AshPalette.edge).background(AshPalette.void)) {
-                Crossfade(targetState = state.conqueredRegions, animationSpec = tween(650)) { liberated ->
-                    PixelArtImage(remember(liberated) { lostMarchesArt(liberated) },
+                Crossfade(targetState = Triple(state.conqueredRegions, state.outpostLevels,
+                    cosmeticStyle(state, "map")), animationSpec = tween(650)) { (liberated, outposts, look) ->
+                    PixelArtImage(remember(liberated, outposts, look) { lostMarchesArt(liberated, outposts, look) },
                         Modifier.fillMaxSize(), fit = PixelFit.Contain)
                 }
                 PixelArtImage(remember(frame, state.expedition?.regionId) { lostMarchesMotionArt(frame, state.expedition) },
@@ -99,6 +100,8 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
         }
         Body(stringResource(if (daring) Res.string.march_daring_desc else Res.string.march_safe_desc))
         LostMarches.all.forEach { region -> MarchRegionCard(state, region, role, daring) }
+        Rule()
+        EclipseSiegePanel(state)
         Rule()
         RelicSetPanel(state)
         Spacer(Modifier.height(14.dp))
@@ -160,6 +163,10 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
             AshButton(stringResource(Res.string.march_choose_path), canSpecialize(state, buildingId),
                 modifier = Modifier.fillMaxWidth(), color = AshPalette.teal,
                 onClick = { RebootGraph.engine.specialize(buildingId, "utility") })
+        }
+        if (conquered) {
+            Rule()
+            BorderOutpostPanel(state, region)
         }
     }
 }

@@ -204,7 +204,7 @@ tasks.register<JavaExec>("renderPixelArt") {
     classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
 }
 
-/** Prepare a plausible, isolated early-run save for marketing screenshots. */
+/** Prepare isolated early-run, fresh or all-achievement preview saves. */
 tasks.register<JavaExec>("seedScreenshotProfile") {
     group = "verification"
     val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
@@ -212,7 +212,9 @@ tasks.register<JavaExec>("seedScreenshotProfile") {
     mainClass.set("com.embercrown.game.ScreenshotSeedKt")
     classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
     args(providers.gradleProperty("screenshotProfile").orElse("itch-030-showcase").get())
-    if (providers.gradleProperty("screenshotFresh").orNull == "true") args("fresh")
+    val previewMode = providers.gradleProperty("screenshotMode").orNull
+        ?: if (providers.gradleProperty("screenshotFresh").orNull == "true") "fresh" else null
+    if (previewMode != null) args(previewMode)
 }
 
 val iconOutputDir = layout.buildDirectory.dir("generated/icons")

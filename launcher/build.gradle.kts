@@ -27,6 +27,8 @@ java {
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
+    testImplementation(kotlin("test"))
+    testCompileOnly(compose.runtime)
     // compileOnly, never implementation: the compose compiler plugin (applied above for
     // nativeDistributions) refuses to compile without the runtime on the classpath, but no code
     // here actually calls into Compose. compileOnly satisfies the check without pulling it into

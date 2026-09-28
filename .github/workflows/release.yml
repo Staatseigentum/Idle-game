@@ -42,6 +42,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Verify gameplay and updater on this platform
+        run: ./gradlew :composeApp:desktopTest :launcher:test --no-daemon
+        shell: bash
+
       # rpmbuild isn't preinstalled on the ubuntu runner; jpackage shells out to it for packageRpm.
       - name: Install rpm packaging tools
         if: matrix.os_token == 'linux'
@@ -146,11 +150,26 @@ jobs:
           find staged -type f \( -name '*.jar' -o -name '*.apk' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist/ \;
           ls -la dist
 
+      - name: Prepare player-facing release notes
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          awk -v version="$version" '
+            /^## / {
+              if (found) exit
+              if (index($0, "## " version " ") == 1) found = 1
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: release-notes.md
           files: dist/*
           fail_on_unmatched_files: true
 

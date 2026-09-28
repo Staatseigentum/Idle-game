@@ -201,6 +201,10 @@ private fun DesktopKingdom(state: RebootState, buildMode: BuildMode, onBuildMode
                 OmenBanner(state, onOmen)
                 MilestonePanel(state)
                 Rule()
+                RoyalOrdersPanel(state)
+                Rule()
+                CrownDistrictsPanel(state)
+                Rule()
                 Body(stringResource(Res.string.reboot_lore))
                 Rule()
                 BeaconPanel(state)
@@ -208,6 +212,10 @@ private fun DesktopKingdom(state: RebootState, buildMode: BuildMode, onBuildMode
                 EdictPanel(state)
                 Rule()
                 RelicForgePanel(state)
+                Rule()
+                CrownArtifactsPanel(state)
+                Rule()
+                CrownTrialsPanel(state)
                 Rule()
                 RitualPanel(state, onRitual)
             }
@@ -234,6 +242,7 @@ private fun DesktopKingdom(state: RebootState, buildMode: BuildMode, onBuildMode
                     KingdomScene(state, modifier = Modifier.weight(1f).fillMaxWidth(),
                         highlight = state.tutorialStep == 1)
                     SceneActionBar(state)
+                    TrophyShelf(state)
                 }
             }
 
@@ -308,11 +317,16 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                     KingdomScene(state, modifier = Modifier.fillMaxWidth().height(320.dp),
                         highlight = state.tutorialStep == 1)
                     SceneActionBar(state)
+                    TrophyShelf(state)
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Label(stringResource(Res.string.reboot_goal), AshPalette.flame, 9)
                         GoalText(state)
                         OmenBanner(state, onOmen)
                         MilestonePanel(state)
+                        Rule()
+                        RoyalOrdersPanel(state)
+                        Rule()
+                        CrownDistrictsPanel(state)
                         BeaconPanel(state)
                         EdictPanel(state)
                     }
@@ -335,6 +349,10 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                     MilestonePanel(state)
                     Rule()
                     RelicForgePanel(state)
+                    Rule()
+                    CrownArtifactsPanel(state)
+                    Rule()
+                    CrownTrialsPanel(state)
                     Rule()
                     RitualPanel(state, onRitual)
                     Rule()
@@ -454,6 +472,9 @@ private fun GloomBar(gloom: Double, modifier: Modifier = Modifier) {
 @Composable
 private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, highlight: Boolean = false) {
     val gloomBand = (state.gloom / 10).toInt()
+    val flameLook = cosmeticStyle(state, "flame")
+    val bannerLook = cosmeticStyle(state, "banner")
+    val skyLook = cosmeticStyle(state, "sky")
     var frame by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -462,13 +483,18 @@ private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, high
         }
     }
     val art = remember(state.levels, state.buildingUpgrades, state.conqueredRegions,
-        state.specializations, gloomBand, state.beaconSeconds > 0) {
+        state.specializations, state.districtLevels, state.eclipseSiegeStage, gloomBand,
+        state.beaconSeconds > 0, flameLook, bannerLook, skyLook) {
         ashKingdomArt(state.levels, gloomBand * 10, state.beaconSeconds > 0,
-            state.buildingUpgrades, state.conqueredRegions, state.specializations)
+            state.buildingUpgrades, state.conqueredRegions, state.specializations,
+            state.districtLevels, state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
     }
-    val motion = remember(state.levels, state.buildingUpgrades, state.specializations, gloomBand, state.beaconSeconds > 0, frame) {
+    val motion = remember(state.levels, state.buildingUpgrades, state.specializations,
+        state.districtLevels, state.eclipseSiegeStage, gloomBand, state.beaconSeconds > 0,
+        flameLook, bannerLook, skyLook, frame) {
         ashKingdomMotionArt(state.levels, gloomBand * 10, state.beaconSeconds > 0, frame,
-            state.buildingUpgrades, state.specializations)
+            state.buildingUpgrades, state.specializations, state.districtLevels,
+            state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
     }
     var tapCount by remember { mutableIntStateOf(0) }
     var tapPosition by remember { mutableStateOf(Offset.Zero) }

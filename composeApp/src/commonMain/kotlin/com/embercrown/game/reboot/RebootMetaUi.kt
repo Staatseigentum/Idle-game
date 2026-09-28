@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.embercrown.game.resources.*
 import com.embercrown.game.ui.formatAmount
+import com.embercrown.game.ui.pixelart.PixelArtImage
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -174,22 +176,103 @@ internal fun OfflineReport(state: RebootState, onContinue: () -> Unit) {
 
 @Composable
 internal fun ChroniclePanel(state: RebootState) {
+    var wardrobeOpen by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Label(stringResource(Res.string.reboot_chronicle), AshPalette.flameLight, 11)
-        Body(stringResource(Res.string.reboot_chronicle_hint, state.chronicleEntries.size / 3), AshPalette.bone)
+        Body(stringResource(Res.string.reboot_chronicle_hint), AshPalette.bone)
+        TrophyShelf(state)
+        AshButton(
+            label = stringResource(if (wardrobeOpen) Res.string.chron_wardrobe_close
+                else Res.string.chron_wardrobe_open),
+            enabled = true, modifier = Modifier.fillMaxWidth(),
+            onClick = { wardrobeOpen = !wardrobeOpen },
+        )
+        if (wardrobeOpen) ChronicleWardrobe(state)
         StatCard(state)
         ProductionLedger(state)
         Label(stringResource(Res.string.reboot_chronicle_entries, state.chronicleEntries.size, CrownChronicle.all.size), AshPalette.flameLight, 9)
         CrownChronicle.all.forEach { entry ->
             val earned = entry.id in state.chronicleEntries
             val (title, hint) = chronicleText(entry.id)
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth().background(if (earned) AshPalette.panelRaised else AshPalette.panel)
                     .border(1.dp, if (earned) AshPalette.flame else AshPalette.edge).padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                Label(stringResource(title), if (earned) AshPalette.flameLight else AshPalette.muted, 8)
-                Body(stringResource(hint), if (earned) AshPalette.bone else AshPalette.muted)
+                PixelArtImage(remember(entry.id, earned) { chronicleTrophyArt(entry.id, earned) },
+                    Modifier.size(48.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Label(stringResource(title), if (earned) AshPalette.flameLight else AshPalette.muted, 8)
+                    Body(stringResource(hint), if (earned) AshPalette.bone else AshPalette.muted)
+                    if (earned) {
+                        chronicleLore(entry.id)?.let { Body(stringResource(it), AshPalette.teal) }
+                        AshButton(
+                            label = stringResource(if (entry.id in featuredTrophies(state))
+                                Res.string.chron_unpin else Res.string.chron_pin),
+                            enabled = true, modifier = Modifier.fillMaxWidth(),
+                            onClick = { RebootGraph.engine.featureTrophy(entry.id) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun TrophyShelf(state: RebootState) {
+    val featured = featuredTrophies(state)
+    if (featured.isEmpty()) return
+    Column(
+        modifier = Modifier.fillMaxWidth().background(AshPalette.panel)
+            .border(1.dp, AshPalette.flame.copy(alpha = 0.7f)).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Label(stringResource(Res.string.chron_shelf), AshPalette.flameLight, 8)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            featured.forEach { id ->
+                PixelArtImage(remember(id) { chronicleTrophyArt(id, true) }, Modifier.size(36.dp))
+            }
+            Body(stringResource(Res.string.chron_shelf_hint), AshPalette.muted, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ChronicleWardrobe(state: RebootState) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Label(stringResource(Res.string.chron_wardrobe), AshPalette.teal, 9)
+        Body(stringResource(Res.string.chron_wardrobe_hint))
+        ChronicleCosmetics.categories.forEach { category ->
+            Label(stringResource(cosmeticCategoryTitle(category)), AshPalette.flameLight, 8)
+            ChronicleCosmetics.options(category).chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    pair.forEach { look ->
+                        val unlocked = ChronicleCosmetics.unlocked(state, look)
+                        val selected = cosmeticStyle(state, category) == look.id
+                        Column(
+                            Modifier.weight(1f).background(AshPalette.panel)
+                                .border(1.dp, if (selected) AshPalette.teal else AshPalette.edge).padding(7.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Label(stringResource(cosmeticLookTitle(look.id)),
+                                if (unlocked) AshPalette.bone else AshPalette.muted, 7)
+                            AshButton(
+                                label = stringResource(when {
+                                    !unlocked -> Res.string.chron_locked
+                                    selected -> Res.string.chron_equipped
+                                    else -> Res.string.chron_equip
+                                }),
+                                enabled = unlocked && !selected,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = if (selected) AshPalette.teal else AshPalette.flame,
+                                onClick = { RebootGraph.engine.chooseCosmetic(category, look.id) },
+                            )
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
         }
     }
@@ -279,8 +362,12 @@ internal fun ChronicleToast(earned: Set<String>, hold: Boolean, modifier: Modifi
                 .border(2.dp, AshPalette.flame).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Label(stringResource(Res.string.reboot_chronicle_unlocked), AshPalette.flameLight, 8)
+            Label(stringResource(Res.string.chron_sigil_unlocked), AshPalette.flameLight, 8)
             Body(stringResource(title), AshPalette.bone)
+            ChronicleCosmetics.all.firstOrNull { it.achievement == id }?.let { look ->
+                Body(stringResource(Res.string.chron_look_unlocked,
+                    stringResource(cosmeticLookTitle(look.id))), AshPalette.teal)
+            }
         }
     }
 }
@@ -329,5 +416,52 @@ private fun chronicleText(id: String): Pair<StringResource, StringResource> = wh
     "march_conquer" -> Res.string.march_chron_conquer to Res.string.march_chron_conquer_hint
     "march_specialist" -> Res.string.march_chron_specialist to Res.string.march_chron_specialist_hint
     "march_all" -> Res.string.march_chron_all to Res.string.march_chron_all_hint
+    "orders_three" -> Res.string.exp_chron_orders to Res.string.exp_chron_orders_hint
+    "district_one" -> Res.string.exp_chron_district to Res.string.exp_chron_district_hint
+    "district_all" -> Res.string.exp_chron_district_all to Res.string.exp_chron_district_all_hint
+    "outpost_one" -> Res.string.exp_chron_outpost to Res.string.exp_chron_outpost_hint
+    "artifact_one" -> Res.string.exp_chron_artifact to Res.string.exp_chron_artifact_hint
+    "artifacts_all" -> Res.string.exp_chron_artifacts_all to Res.string.exp_chron_artifacts_all_hint
+    "trial_one" -> Res.string.exp_chron_trial to Res.string.exp_chron_trial_hint
+    "trials_all" -> Res.string.exp_chron_trials_all to Res.string.exp_chron_trials_all_hint
+    "eclipse_siege" -> Res.string.exp_chron_siege to Res.string.exp_chron_siege_hint
     else -> Res.string.reboot_chron_ritual to Res.string.reboot_chron_ritual_hint
+}
+
+private fun chronicleLore(id: String): StringResource? = when (id) {
+    "kindled" -> Res.string.chron_lore_kindled
+    "first_mastery" -> Res.string.chron_lore_mastery
+    "beacon" -> Res.string.chron_lore_beacon
+    "citadel" -> Res.string.chron_lore_citadel
+    "crown" -> Res.string.chron_lore_crown
+    "ritual" -> Res.string.chron_lore_ritual
+    "march_conquer" -> Res.string.chron_lore_march
+    "trials_all" -> Res.string.chron_lore_trials
+    "eclipse_siege" -> Res.string.chron_lore_eclipse
+    else -> null
+}
+
+private fun cosmeticCategoryTitle(category: String): StringResource = when (category) {
+    "flame" -> Res.string.chron_category_flame
+    "banner" -> Res.string.chron_category_banner
+    "sky" -> Res.string.chron_category_sky
+    else -> Res.string.chron_category_map
+}
+
+private fun cosmeticLookTitle(id: String): StringResource = when (id) {
+    "ember" -> Res.string.chron_look_ember
+    "moonfire" -> Res.string.chron_look_moonfire
+    "witchfire" -> Res.string.chron_look_witchfire
+    "ghostfire" -> Res.string.chron_look_ghostfire
+    "ash" -> Res.string.chron_look_ash
+    "master" -> Res.string.chron_look_master
+    "march" -> Res.string.chron_look_march
+    "royal" -> Res.string.chron_look_royal
+    "blood" -> Res.string.chron_look_blood
+    "storm" -> Res.string.chron_look_storm
+    "veil" -> Res.string.chron_look_veil
+    "eclipse" -> Res.string.chron_look_eclipse
+    "iron" -> Res.string.chron_look_iron
+    "warden" -> Res.string.chron_look_warden
+    else -> Res.string.chron_look_gilded
 }

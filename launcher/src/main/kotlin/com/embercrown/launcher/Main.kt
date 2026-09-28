@@ -2,7 +2,12 @@ package com.embercrown.launcher
 
 import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.Properties
+import java.util.UUID
+import java.awt.GraphicsEnvironment
+import javax.swing.JOptionPane
 import kotlin.system.exitProcess
 
 /**
@@ -13,12 +18,12 @@ import kotlin.system.exitProcess
  * side is non-fatal: as long as a game jar is already present the launcher still starts it, so a
  * player without internet is never locked out of their save.
  *
- * Layout next to the launcher jar:
+ * Layout in the user's writable app-data directory (not inside the installed launcher):
  * ```
- * Embercrown-Launcher.jar
  * app/
  *   Embercrown.jar
- *   installed.properties   (version = 0.0.1)
+ *   Embercrown.previous.jar
+ *   installed.properties
  * ```
  */
 private object Launcher
@@ -27,79 +32,120 @@ private const val GAME_JAR_NAME = "Embercrown.jar"
 private const val STATE_FILE_NAME = "installed.properties"
 private const val VERSION_KEY = "version"
 
+private class UpdateSkipped : RuntimeException("player chose the installed version")
+
 fun main(args: Array<String>) {
     val offline = args.contains("--offline")
-    val installDir = resolveInstallDir()
-    val appDir = File(installDir, "app").apply { mkdirs() }
+    val appDir = userAppDirectory(System.getProperty("os.name").orEmpty(),
+        File(System.getProperty("user.home")), System.getenv()).apply {
+        check(isDirectory || mkdirs()) { "cannot create game cache at $absolutePath" }
+    }
     val gameJar = File(appDir, GAME_JAR_NAME)
     val stateFile = File(appDir, STATE_FILE_NAME)
+    migrateLegacyInstall(resolveInstallDir(), gameJar, stateFile)
 
     val installed = readInstalledVersion(stateFile)
-    log("install dir: ${installDir.absolutePath}")
+    log("game cache: ${appDir.absolutePath}")
     log("installed version: ${installed ?: "none"}")
 
+    var updated = false
     if (offline) {
         log("--offline given, skipping update check")
     } else {
-        runCatching { updateIfNeeded(installed, gameJar, stateFile) }
-            .onFailure { log("update check failed (${it.message ?: it::class.simpleName}), continuing with installed build") }
+        val window = UpdateWindow(isGameJar(gameJar))
+        runCatching { window.open() }
+            .onFailure { log("could not show update progress: ${it.message}") }
+        try {
+            updated = updateIfNeeded(installed, gameJar, stateFile, window)
+        } catch (_: UpdateSkipped) {
+            log("player chose the installed version")
+        } catch (error: Exception) {
+            log("update check failed (${error.message ?: error::class.simpleName}), continuing with installed build")
+        } finally {
+            runCatching { window.close() }
+        }
     }
 
-    if (!gameJar.isFile) {
+    if (!isGameJar(gameJar) && !restorePreviousJar(gameJar, stateFile)) {
         log("ERROR: no game jar at ${gameJar.absolutePath} and it could not be downloaded.")
         log("Check your connection, or download the jar manually from")
         log("  https://github.com/${LauncherInfo.GITHUB_REPO}/releases/latest")
+        if (!GraphicsEnvironment.isHeadless()) JOptionPane.showMessageDialog(null,
+            "No playable Embercrown build is installed. Please connect to the internet and try again.",
+            "Embercrown Updater", JOptionPane.ERROR_MESSAGE)
         exitProcess(1)
     }
 
-    launchGame(gameJar)
+    try {
+        launchGame(gameJar)
+    } catch (error: Throwable) {
+        if (!updated || !restorePreviousJar(gameJar, stateFile)) throw error
+        log("new build failed (${error.message}), restored previous version")
+        launchGame(gameJar)
+    }
     // Reached only if the game returned control without exiting the JVM itself.
     exitProcess(0)
 }
 
 /** Downloads and installs a newer release, if GitHub reports one. */
-private fun updateIfNeeded(installed: Version?, gameJar: File, stateFile: File) {
+private fun updateIfNeeded(installed: Version?, gameJar: File, stateFile: File,
+                           window: UpdateWindow): Boolean {
+    if (window.cancelled.get()) throw UpdateSkipped()
     val release = GitHub.latestRelease(LauncherInfo.GITHUB_REPO)
     if (release == null) {
         log("no release information available")
-        return
+        return false
     }
     val latest = Version.parseOrNull(release.tagName)
     if (latest == null) {
         log("release tag '${release.tagName}' is not a version, skipping")
-        return
+        return false
     }
-    if (installed != null && latest <= installed && gameJar.isFile) {
+    if (installed != null && latest <= installed && isGameJar(gameJar)) {
         log("up to date ($installed)")
-        return
+        return false
     }
 
     val asset = release.pickGameJar()
     if (asset == null) {
         log("release $latest has no jar for ${currentOsToken()}, keeping current build")
-        return
+        return false
     }
 
     log("updating to $latest (${asset.name}, ${asset.size / 1024} KiB)")
-    // Download beside the target first so a failed or partial transfer can never replace a
-    // working install.
-    val temp = File(gameJar.parentFile, "${GAME_JAR_NAME}.part")
-    temp.delete()
-    GitHub.download(asset.downloadUrl, temp) { done, total ->
-        if (total > 0) logProgress(done, total)
+    window.downloading(latest)
+    val temp = File(gameJar.parentFile, "${GAME_JAR_NAME}.${UUID.randomUUID()}.part")
+    try {
+        GitHub.download(asset.downloadUrl, temp) { done, total ->
+            if (window.cancelled.get()) throw UpdateSkipped()
+            if (total > 0) {
+                logProgress(done, total)
+                window.progress(done, total)
+            }
+        }
+        if (window.cancelled.get()) throw UpdateSkipped()
+        println()
+        window.verifying()
+        installVerifiedJar(temp, gameJar, stateFile, asset, latest)
+    } finally {
+        Files.deleteIfExists(temp.toPath())
     }
-    println()
-
-    if (temp.length() <= 0) {
-        temp.delete()
-        error("downloaded file was empty")
-    }
-    if (!temp.renameTo(gameJar)) {
-        gameJar.delete()
-        check(temp.renameTo(gameJar)) { "could not move downloaded jar into place" }
-    }
-    writeInstalledVersion(stateFile, latest)
     log("updated to $latest")
+    return true
+}
+
+/** Preserve 0.3.x caches while moving future writes out of packaged application directories. */
+private fun migrateLegacyInstall(launcherDir: File, gameJar: File, stateFile: File) {
+    if (isGameJar(gameJar)) return
+    val oldApp = File(launcherDir, "app")
+    val oldJar = File(oldApp, GAME_JAR_NAME)
+    if (!isGameJar(oldJar)) return
+    runCatching {
+        Files.copy(oldJar.toPath(), gameJar.toPath(), REPLACE_EXISTING)
+        val oldState = File(oldApp, STATE_FILE_NAME)
+        if (oldState.isFile) Files.copy(oldState.toPath(), stateFile.toPath(), REPLACE_EXISTING)
+        log("migrated previous game cache without deleting it")
+    }.onFailure { log("could not migrate previous cache: ${it.message}") }
 }
 
 /**
@@ -157,14 +203,6 @@ private fun readInstalledVersion(stateFile: File): Version? {
         stateFile.inputStream().use { properties.load(it) }
         properties.getProperty(VERSION_KEY)?.let { Version.parseOrNull(it) }
     }.getOrNull()
-}
-
-private fun writeInstalledVersion(stateFile: File, version: Version) {
-    runCatching {
-        val properties = Properties()
-        properties.setProperty(VERSION_KEY, version.toString())
-        stateFile.outputStream().use { properties.store(it, "Embercrown installed build") }
-    }
 }
 
 internal fun log(message: String) = println("[launcher] $message")

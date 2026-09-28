@@ -58,10 +58,42 @@ private val worldColors = mapOf(
     'z' to Color(0xFF39404F), // smoke
 )
 
+private fun kingdomCosmeticColors(flame: String, banner: String, sky: String): Map<Char, Color> {
+    val fire = when (flame) {
+        "moonfire" -> Triple(Color(0xFF3A819E), Color(0xFF76D8E8), Color(0xFFB8F4F6))
+        "witchfire" -> Triple(Color(0xFF6C3C91), Color(0xFFB77DE3), Color(0xFFE7BEFF))
+        "ghostfire" -> Triple(Color(0xFF648778), Color(0xFFA8D8B3), Color(0xFFE5F8D7))
+        else -> Triple(worldColors.getValue('e'), worldColors.getValue('E'), worldColors.getValue('Y'))
+    }
+    val cloth = when (banner) {
+        "master" -> Color(0xFFB97845) to Color(0xFFFFD784)
+        "march" -> Color(0xFF337F80) to Color(0xFF92DDCE)
+        "royal" -> Color(0xFFB44A55) to Color(0xFFFFD784)
+        "eclipse" -> Color(0xFF625188) to Color(0xFFE9D6A0)
+        else -> Color(0xFF71434D) to Color(0xFFB98565)
+    }
+    val skyColors = when (sky) {
+        "storm" -> mapOf('a' to Color(0xFF071421), 'b' to Color(0xFF13283D),
+            'c' to Color(0xFF253A48), 'd' to Color(0xFF2C3F4C),
+            'r' to Color(0xFF2F657A), 'R' to Color(0xFF69AEBF), 'Q' to Color(0xFFD3F3EA))
+        "veil" -> mapOf('a' to Color(0xFF140D25), 'b' to Color(0xFF2A1A3A),
+            'c' to Color(0xFF382747), 'd' to Color(0xFF49334F),
+            'r' to Color(0xFF4D3B78), 'R' to Color(0xFF9982C4), 'Q' to Color(0xFFE5D1F7))
+        "eclipse" -> mapOf('a' to Color(0xFF090B13), 'b' to Color(0xFF171827),
+            'c' to Color(0xFF2E2532), 'd' to Color(0xFF3C2A31),
+            'r' to Color(0xFF726047), 'R' to Color(0xFF17141C), 'Q' to Color(0xFFB68E56))
+        else -> emptyMap()
+    }
+    return worldColors + skyColors + mapOf('e' to fire.first, 'E' to fire.second, 'Y' to fire.third,
+        'n' to cloth.first, 'N' to cloth.second)
+}
+
 /** The static scene is rasterized only when a building, the beacon or the gloom changes. */
 fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
                   masteries: Map<String, Int> = emptyMap(), conquered: Set<String> = emptySet(),
-                  specializations: Map<String, String> = emptyMap()): PixelArt {
+                  specializations: Map<String, String> = emptyMap(),
+                  districts: Map<String, Int> = emptyMap(), siegeWon: Boolean = false,
+                  flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood"): PixelArt {
     val g = PixelGridBuilder(160, 120)
     for (y in 0..82) {
         val band = when {
@@ -220,10 +252,39 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         if (id in conquered) {
             val (x, y) = position
             g.rect(x, y, x + 1, y + 12, 'B')
-            g.rect(x + 2, y + 1, x + 8, y + 4, 'E')
-            g.rect(x + 2, y + 2, x + 5, y + 3, 'Y')
+            g.rect(x + 2, y + 1, x + 8, y + 4, 'n')
+            g.rect(x + 2, y + 2, x + 5, y + 3, 'N')
         }
     }
+    if (bannerLook != "ash") {
+        listOf(9, 147).forEach { x ->
+            g.rect(x, 80, x + 1, 100, 'B')
+            g.rect(x + 2, 81, x + 10, 86, 'n')
+            g.rect(x + 2, 82, x + 6, 83, 'N')
+        }
+    }
+    // Restored quarters light the courtyard in distinct clusters; each tier adds a lantern.
+    val districtAnchors = mapOf("hearth" to (21 to 104), "bell" to (49 to 103),
+        "bone" to (101 to 103), "storm" to (130 to 104))
+    districtAnchors.forEach { (id, anchor) ->
+        val level = districts[id] ?: 0
+        repeat(level.coerceIn(0, 3)) { tier ->
+            val x = anchor.first + tier * 5
+            val y = anchor.second - tier % 2
+            g.rect(x, y - 6, x + 1, y, 'B')
+            g.rect(x - 1, y - 7, x + 2, y - 5, 'e')
+            g.set(x, y - 7, 'Y')
+        }
+        if (level >= 3) {
+            g.rect(anchor.first + 14, anchor.second - 13, anchor.first + 15, anchor.second - 4, 'B')
+            g.rect(anchor.first + 16, anchor.second - 13, anchor.first + 21, anchor.second - 10, 'E')
+        }
+    }
+    if (siegeWon) {
+        g.ring(121, 28, 19, 16, 'Y')
+        g.rect(75, 48, 85, 50, 'Y')
+    }
+    if (skyLook == "eclipse") g.ring(121, 28, 17, 14, 'N')
     // Soot, worn masonry and orange sparks give the scene a lived-in pixel texture.
     for (i in 0 until 112) {
         val x = (i * 53 + i * i * 3) % 160
@@ -237,12 +298,14 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
             g.set(x, y, 'p')
         }
     }
-    return g.build(worldColors)
+    return g.build(kingdomCosmeticColors(flameLook, bannerLook, skyLook))
 }
 
 /** Sparse transparent layer: only moving pixels are painted each frame. */
 fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean, frame: Int,
-                        masteries: Map<String, Int> = emptyMap(), specializations: Map<String, String> = emptyMap()): PixelArt {
+                        masteries: Map<String, Int> = emptyMap(), specializations: Map<String, String> = emptyMap(),
+                        districts: Map<String, Int> = emptyMap(), siegeWon: Boolean = false,
+                        flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood"): PixelArt {
     val g = PixelGridBuilder(160, 120)
     for (i in 0 until 20) {
         val x = (i * 47 + i * i * 13) % 158 + 1
@@ -327,6 +390,31 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
             g.set(x - 2 + frame % 5, y - 4 - rise, if (path == "industry") 'Y' else 'P')
         }
     }
+    val districtAnchors = mapOf("hearth" to (21 to 104), "bell" to (49 to 103),
+        "bone" to (101 to 103), "storm" to (130 to 104))
+    districtAnchors.forEach { (id, anchor) ->
+        repeat((districts[id] ?: 0).coerceIn(0, 3)) { tier ->
+            val x = anchor.first + tier * 5
+            val y = anchor.second - tier % 2 - 7
+            if ((frame + tier * 4) % 8 < 5) g.set(x, y, 'Y')
+            g.set(x + (frame + tier) % 3 - 1, y - 1 - frame % 4, 'E')
+        }
+    }
+    if (siegeWon && frame % 12 < 8) {
+        g.ring(121, 28, 19, 17, 'Y')
+        g.set(80 + frame % 7 - 3, 42 - frame % 9, 'Y')
+    }
+    if (bannerLook != "ash") listOf(9, 147).forEach { x ->
+        g.rect(x + 2, 82, x + 6 + frame / 4 % 4, 84, 'n')
+        g.set(x + 3 + frame / 4 % 4, 83, 'N')
+    }
+    if (skyLook == "storm" && frame % 20 < 7) {
+        g.line(119, 43, 114 + frame % 4, 55, 'S')
+    }
+    if (skyLook == "veil" && frame % 8 < 5) {
+        g.set(114 + frame % 17, 10 + frame / 2 % 38, 'P')
+    }
+    if (skyLook == "eclipse" && frame % 12 < 7) g.ring(121, 28, 18, 17, 'N')
     if (masteries.isNotEmpty()) repeat(8) { i ->
         val x = (i * 39 + frame * 3) % 160
         val y = 48 + (i * 11 + frame) % 48
@@ -342,7 +430,7 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         val x = (i * 31 + frame * 2) % 185 - 25
         g.rect(x, 105 + i % 3, x + 17, 106 + i % 3, 'V')
     }
-    return g.build(worldColors)
+    return g.build(kingdomCosmeticColors(flameLook, bannerLook, skyLook))
 }
 
 private fun fir(g: PixelGridBuilder, x: Int, bottom: Int, height: Int, color: Char) {

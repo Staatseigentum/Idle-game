@@ -109,11 +109,11 @@ class RebootGameTest {
     }
 
     @Test
-    fun chronicleIsEarnedOnceAndRewardsFutureRituals() {
+    fun chronicleIsEarnedOnceWithoutChangingRitualRewards() {
         val state = withChronicle(RebootState(levels = mapOf("coalpit" to 1, "belltower" to 1), totalTaps = 100))
         assertEquals(3, state.chronicleEntries.size)
         assertEquals(state, withChronicle(state))
-        assertEquals(ritualReward(state.copy(chronicleEntries = emptySet())) + 1, ritualReward(state))
+        assertEquals(ritualReward(state.copy(chronicleEntries = emptySet())), ritualReward(state))
         assertEquals(state, Json.decodeFromString<RebootState>(Json.encodeToString(state)))
     }
 

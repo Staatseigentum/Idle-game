@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 
 /**
  * Downloads the release APK and fires Android's own package installer on it, with no dialog of
@@ -22,10 +23,14 @@ actual suspend fun applyUpdateAutomatically(update: AvailableUpdate) {
     } ?: return
 
     withContext(Dispatchers.IO) {
+        val target = File(appContext.cacheDir, "update-${update.version}.apk")
         runCatching {
-            val target = File(appContext.cacheDir, "update.apk")
             downloadTo(asset.downloadUrl, target)
+            verifyApk(target, asset)
             installApk(target)
+        }.onFailure {
+            target.delete()
+            println("[updater] Android update failed: ${it.message}")
         }
     }
 }
@@ -39,11 +44,41 @@ private fun installApk(apk: File) {
     appContext.startActivity(intent)
 }
 
+/** GitHub's asset metadata guards the package installer from a partial or altered download. */
+private fun verifyApk(apk: File, asset: UpdateAsset) {
+    require(apk.isFile && asset.size > 0 && apk.length() == asset.size) {
+        "APK download size mismatch"
+    }
+    asset.digest?.takeIf { it.isNotBlank() }?.let { expected ->
+        require(expected.startsWith("sha256:") && expected.length == 71) { "unsupported APK digest" }
+        val hash = MessageDigest.getInstance("SHA-256")
+        apk.inputStream().buffered().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                hash.update(buffer, 0, count)
+            }
+        }
+        val hex = "0123456789abcdef"
+        val actual = buildString(64) {
+            hash.digest().forEach { byte ->
+                val value = byte.toInt() and 0xff
+                append(hex[value ushr 4])
+                append(hex[value and 15])
+            }
+        }
+        require(expected.removePrefix("sha256:").equals(actual, ignoreCase = true)) { "APK SHA-256 mismatch" }
+    }
+}
+
 /** Downloads [url] to [target], following GitHub's redirect from the API host to its CDN. */
 private fun downloadTo(url: String, target: File) {
     var current = url
     repeat(5) {
-        val connection = (URL(current).openConnection() as HttpURLConnection).apply {
+        val endpoint = URL(current)
+        require(endpoint.protocol == "https") { "update URLs must use HTTPS" }
+        val connection = (endpoint.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 30_000

@@ -47,7 +47,7 @@ fun enactEdict(state: RebootState, id: String): RebootState =
         state.edictCooldownSeconds > 0 || state.edictId == id) state
     else state.copy(edictId = id, edictCooldownSeconds = 45)
 
-/** Chronicles reward discoveries with extra relics at the ritual, not a copy of a flat idle bonus. */
+/** Chronicle discoveries unlock only visual keepsakes and story, never gameplay bonuses. */
 data class ChronicleEntry(val id: String, val earned: (RebootState) -> Boolean)
 
 object CrownChronicle {
@@ -70,6 +70,16 @@ object CrownChronicle {
         ChronicleEntry("march_conquer") { it.conqueredRegions.isNotEmpty() },
         ChronicleEntry("march_specialist") { it.specializations.isNotEmpty() },
         ChronicleEntry("march_all") { it.conqueredRegions.size == LostMarches.all.size },
+        ChronicleEntry("orders_three") { it.claimedOrders.size >= 3 },
+        ChronicleEntry("district_one") { it.districtLevels.values.sum() >= 1 },
+        ChronicleEntry("district_all") { CrownDistricts.all.all { district ->
+            (it.districtLevels[district.id] ?: 0) >= CrownDistricts.MAX_LEVEL } },
+        ChronicleEntry("outpost_one") { it.outpostLevels.values.sum() >= 1 },
+        ChronicleEntry("artifact_one") { it.craftedArtifacts.isNotEmpty() },
+        ChronicleEntry("artifacts_all") { it.craftedArtifacts.size == CrownArtifacts.all.size },
+        ChronicleEntry("trial_one") { it.completedTrials.isNotEmpty() },
+        ChronicleEntry("trials_all") { it.completedTrials.size == CrownTrials.all.size },
+        ChronicleEntry("eclipse_siege") { it.eclipseSiegeStage >= 3 },
     )
 }
 

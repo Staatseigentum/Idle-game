@@ -100,6 +100,8 @@ data class RebootState(
     val buildingUpgrades: Map<String, Int> = emptyMap(),
     val claimedMilestones: Set<String> = emptySet(),
     val chronicleEntries: Set<String> = emptySet(),
+    val cosmeticStyles: Map<String, String> = emptyMap(),
+    val featuredTrophies: List<String>? = null,
     val gloom: Double = 8.0,
     /** Unspent permanent relics. */
     val relics: Int = 0,
@@ -109,6 +111,19 @@ data class RebootState(
     val beaconCooldownSeconds: Int = 0,
     val beaconsLit: Int = 0,
     val totalTaps: Int = 0,
+    val runTaps: Int = 0,
+    val runBeacons: Int = 0,
+    val runExpeditions: Int = 0,
+    val claimedOrders: Set<String> = emptySet(),
+    val districtLevels: Map<String, Int> = emptyMap(),
+    val outpostLevels: Map<String, Int> = emptyMap(),
+    val craftedArtifacts: Set<String> = emptySet(),
+    val equippedArtifacts: Set<String> = emptySet(),
+    val activeTrialId: String? = null,
+    val nextTrialId: String? = null,
+    val completedTrials: Set<String> = emptySet(),
+    val eclipseSiegeStage: Int = 0,
+    val autoStokeSeconds: Double = 0.0,
     val omensResolved: Int = 0,
     val omenSequence: Int = 0,
     val omenCountdownSeconds: Int = 240,
@@ -143,7 +158,8 @@ data class RebootState(
 
 fun buildingCost(building: RebootBuilding, level: Int, state: RebootState): Double =
     floor(building.baseCost * building.growth.pow(level.coerceAtLeast(0)) *
-        (1.0 - state.relicRank("foundation") * 0.04))
+        (1.0 - state.relicRank("foundation") * 0.04) *
+        (if (state.activeTrialId == "cinders") 1.25 else 1.0))
 
 fun buildingBundleCost(building: RebootBuilding, state: RebootState, count: Int): Double {
     if (count <= 0) return 0.0
@@ -180,6 +196,7 @@ fun buildingProduction(building: RebootBuilding, state: RebootState): Double {
         value * tier.outputMultiplier
     }
     return building.output * level * (1.0 + level / 20.0) * masteryMultiplier *
+        districtMultiplier(building.id, state) *
         (if (state.specializations[building.id] == "industry") 1.4 else 1.0)
 }
 
@@ -202,6 +219,11 @@ fun production(state: RebootState): Double = rawProduction(state) *
     }) *
     (1.0 + state.conqueredRegions.size * 0.05) *
     (if (state.relicSetId == "emberguard") 1.18 else 1.0) *
+    (1.0 + state.claimedOrders.size * 0.02) *
+    outpostMultiplier(state) *
+    (if (hasArtifact(state, "cinder_crown")) 1.18 else 1.0) *
+    (if (state.eclipseSiegeStage == 3) 1.20 else 1.0) *
+    (if ("night" in state.completedTrials) 1.10 else 1.0) *
     (1.0 - state.gloom.coerceIn(0.0, 100.0) * 0.0035)
 
 fun tapYield(state: RebootState): Double = (1.0 + rawProduction(state) * 0.12) *
@@ -218,11 +240,15 @@ fun nextMilestone(state: RebootState): RebootMilestone? =
     RebootMilestones.all.firstOrNull { it.id !in state.claimedMilestones }
 
 fun ritualReward(state: RebootState): Int =
-    8 + state.claimedMilestones.size * 2 + state.chronicleEntries.size / 3 +
-        floor(sqrt(state.lifetimeEmbers / CROWN_TARGET) * 8).toInt()
+    8 + state.claimedMilestones.size * 2 +
+        floor(sqrt(state.lifetimeEmbers / CROWN_TARGET) * 8).toInt() +
+        (if (hasArtifact(state, "eclipse_sigil")) 5 else 0) +
+        (if (state.eclipseSiegeStage == 3) 6 else 0) +
+        (if (state.activeTrialId != null) 3 else 0)
 
 fun canRitual(state: RebootState): Boolean =
-    "crown" in state.claimedMilestones && state.level("eclipsethrone") > 0 && state.gloom >= 65.0
+    "crown" in state.claimedMilestones && state.level("eclipsethrone") > 0 &&
+        state.gloom >= 65.0 && trialGoalMet(state)
 
 /** Tutorial rewards and stage changes live in the state transition, never in composition. */
 fun withTutorialProgress(state: RebootState): RebootState {
@@ -248,11 +274,18 @@ fun performAshRitual(state: RebootState, now: Long = nowEpochSeconds()): RebootS
         relics = state.relics + ritualReward(state),
         relicUpgrades = state.relicUpgrades,
         chronicleEntries = state.chronicleEntries,
+        cosmeticStyles = state.cosmeticStyles,
+        featuredTrophies = state.featuredTrophies,
         beaconsLit = state.beaconsLit,
         totalTaps = state.totalTaps,
         omensResolved = state.omensResolved,
         omenSequence = state.omenSequence,
         expeditionsCompleted = state.expeditionsCompleted,
+        outpostLevels = state.outpostLevels,
+        craftedArtifacts = state.craftedArtifacts,
+        equippedArtifacts = state.equippedArtifacts,
+        completedTrials = state.completedTrials + listOfNotNull(state.activeTrialId),
+        activeTrialId = state.nextTrialId,
         playedSeconds = state.playedSeconds,
         reign = state.reign + 1,
         lastPlayedEpochSeconds = now,
@@ -270,7 +303,9 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
             if (current.beaconSeconds > 0) current.beaconSeconds.toDouble() else 60.0,
             if (current.omenEffectSeconds > 0) current.omenEffectSeconds.toDouble() else 60.0,
         )))
-        val gained = production(current) * step
+        val autoProgress = if ("cinders" in current.completedTrials) current.autoStokeSeconds + step else 0.0
+        val autoTicks = floor(autoProgress / 5.0).toInt()
+        val gained = production(current) * step + autoTicks * tapYield(current)
         val raw = rawProduction(current)
         val expeditionBefore = current.expedition
         val expeditionAfter = expeditionBefore?.copy(
@@ -280,11 +315,14 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
         current = current.copy(
             embers = current.embers + gained,
             lifetimeEmbers = current.lifetimeEmbers + gained,
+            autoStokeSeconds = autoProgress - autoTicks * 5.0,
             gloom = (current.gloom + (if (current.tutorialStep in 1..2) 0.0 else step) *
                 (0.11 + raw / (raw + 200.0) * 0.08) *
                 (1.0 - current.relicRank("nightward") * 0.12) *
                 (if (current.specializations["coalpit"] == "utility") 0.9 else 1.0) *
                 (if (current.relicSetId == "nightveil") 0.8 else 1.0) *
+                (if (hasArtifact(current, "marsh_lantern")) 0.75 else 1.0) *
+                (if (current.activeTrialId == "night") 1.50 else 1.0) *
                 (if (current.omenEffectId == "ward" && current.omenEffectSeconds > 0) 0.65 else 1.0) *
                 (when (current.edictId) { "harvest" -> 1.35; "ward" -> 0.55; else -> 1.0 })).coerceAtMost(100.0),
             beaconSeconds = (current.beaconSeconds - step.toInt()).coerceAtLeast(0),
@@ -363,6 +401,7 @@ class RebootEngine {
                 embers = s.embers + yield,
                 lifetimeEmbers = s.lifetimeEmbers + yield,
                 totalTaps = s.totalTaps + 1,
+                runTaps = s.runTaps + 1,
             )))
         }
     }
@@ -401,6 +440,51 @@ class RebootEngine {
                 relics = s.relics + milestone.relicReward,
             ))
         }
+        save()
+    }
+
+    fun claimOrder(id: String) {
+        mutate(SfxId.ASH_RELIC) { claimRoyalOrder(it, id) }
+        save()
+    }
+
+    fun chooseCosmetic(category: String, id: String) {
+        mutate(SfxId.ASH_PAGE) { selectCosmetic(it, category, id) }
+        save()
+    }
+
+    fun featureTrophy(id: String) {
+        mutate(SfxId.ASH_PAGE) { toggleFeaturedTrophy(it, id) }
+        save()
+    }
+
+    fun improveDistrict(id: String) {
+        mutate(SfxId.ASH_BUILD) { upgradeDistrict(it, id) }
+        save()
+    }
+
+    fun improveOutpost(id: String) {
+        mutate(SfxId.ASH_MARCH) { upgradeOutpost(it, id) }
+        save()
+    }
+
+    fun forgeArtifact(id: String) {
+        mutate(SfxId.ASH_RELIC) { craftArtifact(it, id) }
+        save()
+    }
+
+    fun equipArtifact(id: String) {
+        mutate(SfxId.ASH_RELIC) { toggleArtifact(it, id) }
+        save()
+    }
+
+    fun queueTrial(id: String?) {
+        mutate(SfxId.ASH_PAGE) { selectNextTrial(it, id) }
+        save()
+    }
+
+    fun assaultEclipse() {
+        mutate(SfxId.ASH_MARCH) { advanceEclipseSiege(it) }
         save()
     }
 
@@ -455,6 +539,7 @@ class RebootEngine {
                 beaconSeconds = 30 + s.relicRank("beaconkeeper") * 6,
                 beaconCooldownSeconds = 45,
                 beaconsLit = s.beaconsLit + 1,
+                runBeacons = s.runBeacons + 1,
             ))
         }
         save()

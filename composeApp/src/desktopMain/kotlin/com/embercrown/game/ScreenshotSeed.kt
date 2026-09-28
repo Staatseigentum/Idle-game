@@ -2,20 +2,74 @@ package com.embercrown.game
 
 import com.embercrown.game.game.nowEpochSeconds
 import com.embercrown.game.reboot.RebootState
+import com.embercrown.game.reboot.RebootBuildings
+import com.embercrown.game.reboot.RebootMilestones
+import com.embercrown.game.reboot.CrownChronicle
+import com.embercrown.game.reboot.CrownDistricts
+import com.embercrown.game.reboot.CrownArtifacts
+import com.embercrown.game.reboot.CrownTrials
+import com.embercrown.game.reboot.LostMarches
+import com.embercrown.game.reboot.RoyalOrders
+import com.embercrown.game.reboot.TUTORIAL_DONE
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.prefs.Preferences
 
-/** Developer-only fixture for repeatable store screenshots; never touches the regular save node. */
+/** Developer-only fixtures for private preview profiles; never touch the regular save node. */
 fun main(args: Array<String>) {
     val profile = args.firstOrNull() ?: error("Pass one isolated profile name")
-    val fresh = args.getOrNull(1) == "fresh"
-    require(args.size in 1..2 && (args.size == 1 || fresh))
+    val mode = args.getOrNull(1) ?: "showcase"
+    require(args.size in 1..2 && mode in setOf("showcase", "fresh", "all-achievements"))
     require(Regex("[A-Za-z0-9_-]{1,48}").matches(profile))
     val profileNode = Preferences.userRoot().node("com/embercrown/game/profiles/$profile")
-    val state = if (fresh) RebootState(
+    if (mode == "all-achievements") {
+        require(profileNode.get("embercrown_ash_kingdom_v1", null) == null) {
+            "Refusing to overwrite an existing achievement preview profile"
+        }
+    }
+    val state = if (mode == "fresh") RebootState(
         tutorialStep = 0,
         tutorialAcknowledged = false,
+        lastPlayedEpochSeconds = nowEpochSeconds(),
+    ) else if (mode == "all-achievements") RebootState(
+        embers = 4_850_000_000_000.0,
+        lifetimeEmbers = 6_300_000_000_000.0,
+        levels = RebootBuildings.all.associate { building ->
+            building.id to when (building.id) {
+                "coalpit", "hollowmill", "belltower" -> 55
+                "eclipsethrone" -> 3
+                else -> 25
+            }
+        },
+        buildingUpgrades = RebootBuildings.all.associate { it.id to 2 },
+        claimedMilestones = RebootMilestones.all.map { it.id }.toSet(),
+        chronicleEntries = CrownChronicle.all.map { it.id }.toSet(),
+        cosmeticStyles = mapOf("flame" to "moonfire", "banner" to "eclipse",
+            "sky" to "eclipse", "map" to "gilded"),
+        featuredTrophies = listOf("march_all", "artifacts_all", "trials_all", "eclipse_siege"),
+        gloom = 38.0,
+        relics = 48,
+        reign = 4,
+        beaconsLit = 10,
+        totalTaps = 280,
+        omensResolved = 8,
+        expeditionsCompleted = 16,
+        claimedOrders = RoyalOrders.all.map { it.id }.toSet(),
+        districtLevels = CrownDistricts.all.associate { it.id to CrownDistricts.MAX_LEVEL },
+        outpostLevels = LostMarches.all.associate { it.id to 3 },
+        craftedArtifacts = CrownArtifacts.all.map { it.id }.toSet(),
+        equippedArtifacts = setOf("cinder_crown", "tide_compass"),
+        completedTrials = CrownTrials.all.toSet(),
+        eclipseSiegeStage = 3,
+        fragments = LostMarches.all.associate { it.id to 20 },
+        conqueredRegions = LostMarches.all.map { it.id }.toSet(),
+        specializations = mapOf("coalpit" to "industry", "moonforge" to "utility",
+            "bonelibrary" to "utility", "citadel" to "industry"),
+        relicSetId = "emberguard",
+        tutorialStep = TUTORIAL_DONE,
+        tutorialAcknowledged = true,
+        runSeconds = 8_400.0,
+        playedSeconds = 32_000.0,
         lastPlayedEpochSeconds = nowEpochSeconds(),
     ) else RebootState(
         embers = 420_000.0,
@@ -38,5 +92,5 @@ fun main(args: Array<String>) {
     profileNode.put("embercrown_ash_kingdom_v1", Json.encodeToString(state))
     profileNode.put("embercrown_language_v1", "en")
     profileNode.flush()
-    println("Seeded ${if (fresh) "fresh" else "showcase"} screenshot profile: $profile")
+    println("Seeded $mode preview profile: $profile")
 }
