@@ -133,6 +133,8 @@ jobs:
     needs: [desktop, android-and-launcher]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: staged
@@ -148,6 +150,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: CHANGELOG.md
           files: dist/*
           fail_on_unmatched_files: true
 
@@ -159,6 +162,8 @@ jobs:
       BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
       ITCH_TARGET: staatseigentum/embercrown
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: staged
@@ -199,3 +204,6 @@ jobs:
 
       - name: Push Android build (.apk)
         run: butler push staged/android-and-launcher/Embercrown-android.apk "$ITCH_TARGET:android" --userversion "${{ steps.version.outputs.version }}"
+
+      - name: Push changelog
+        run: butler push CHANGELOG.md "$ITCH_TARGET:changelog" --userversion "${{ steps.version.outputs.version }}"

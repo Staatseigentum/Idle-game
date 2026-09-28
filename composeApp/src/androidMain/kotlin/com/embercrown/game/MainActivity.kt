@@ -5,7 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.embercrown.game.game.appContext
-import com.embercrown.game.ui.App
+import com.embercrown.game.reboot.RebootApp
+import com.embercrown.game.reboot.RebootGraph
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,7 +14,17 @@ class MainActivity : ComponentActivity() {
         appContext = applicationContext
         enableEdgeToEdge()
         setContent {
-            App()
+            RebootApp()
         }
+    }
+
+    override fun onPause() {
+        RebootGraph.pauseAudioIfInitialized()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        RebootGraph.resumeAudioIfInitialized()
     }
 }

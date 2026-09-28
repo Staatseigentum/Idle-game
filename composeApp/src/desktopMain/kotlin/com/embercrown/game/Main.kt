@@ -8,15 +8,15 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.embercrown.game.ui.App
+import com.embercrown.game.reboot.RebootApp
 import com.embercrown.game.ui.pixelart.appIcon
 import com.embercrown.game.ui.pixelart.toImageBitmap
 
 fun main() = application {
     val windowState = rememberWindowState(
         position = WindowPosition(Alignment.Center),
-        width = 1100.dp,
-        height = 780.dp,
+        width = 1280.dp,
+        height = 800.dp,
     )
     val windowIcon = remember { BitmapPainter(appIcon().toImageBitmap()) }
     Window(
@@ -26,6 +26,6 @@ fun main() = application {
         icon = windowIcon,
     ) {
         window.minimumSize = java.awt.Dimension(480, 720)
-        App()
+        RebootApp()
     }
 }

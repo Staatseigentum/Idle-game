@@ -97,6 +97,12 @@ kotlin {
             }
         }
 
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+
         val androidMain by getting {
             dependencies {
                 implementation(compose.uiTooling)
@@ -196,6 +202,17 @@ tasks.register<JavaExec>("renderPixelArt") {
     dependsOn(desktopMain.compileTaskProvider)
     mainClass.set("com.embercrown.game.PixelArtPreviewKt")
     classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
+}
+
+/** Prepare a plausible, isolated early-run save for marketing screenshots. */
+tasks.register<JavaExec>("seedScreenshotProfile") {
+    group = "verification"
+    val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    dependsOn(desktopMain.compileTaskProvider)
+    mainClass.set("com.embercrown.game.ScreenshotSeedKt")
+    classpath = files(desktopMain.output.allOutputs, desktopMain.runtimeDependencyFiles)
+    args(providers.gradleProperty("screenshotProfile").orElse("itch-030-showcase").get())
+    if (providers.gradleProperty("screenshotFresh").orNull == "true") args("fresh")
 }
 
 val iconOutputDir = layout.buildDirectory.dir("generated/icons")

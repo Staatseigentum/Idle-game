@@ -12,6 +12,8 @@ data class UiSettings(
     val language: String? = null,
     val masterVolume: Float = 0.7f,
     val muted: Boolean = false,
+    val musicVolume: Float = 0.5f,
+    val effectsVolume: Float = 0.75f,
 )
 
 /**
@@ -37,15 +39,31 @@ class UiSettingsStore(private val settings: Settings) {
         settings[KEY_MUTED] = muted
     }
 
+    fun setMusicVolume(volume: Float) {
+        val safe = volume.coerceIn(0f, 1f)
+        _state.update { it.copy(musicVolume = safe) }
+        settings[KEY_MUSIC_VOLUME] = safe
+    }
+
+    fun setEffectsVolume(volume: Float) {
+        val safe = volume.coerceIn(0f, 1f)
+        _state.update { it.copy(effectsVolume = safe) }
+        settings[KEY_EFFECTS_VOLUME] = safe
+    }
+
     private fun load(): UiSettings = UiSettings(
         language = settings.getStringOrNull(KEY_LANGUAGE),
         masterVolume = settings[KEY_VOLUME, 0.7f],
         muted = settings[KEY_MUTED, false],
+        musicVolume = settings[KEY_MUSIC_VOLUME, 0.5f],
+        effectsVolume = settings[KEY_EFFECTS_VOLUME, 0.75f],
     )
 
     companion object {
         private const val KEY_LANGUAGE = "embercrown_language_v1"
         private const val KEY_VOLUME = "embercrown_master_volume_v1"
         private const val KEY_MUTED = "embercrown_muted_v1"
+        private const val KEY_MUSIC_VOLUME = "embercrown_music_volume_v1"
+        private const val KEY_EFFECTS_VOLUME = "embercrown_effects_volume_v1"
     }
 }

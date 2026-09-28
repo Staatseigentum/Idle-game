@@ -40,28 +40,28 @@ actual class MusicPlayer actual constructor() {
 
     actual fun play() {
         playRequested = true
-        if (!muted) track?.play()
+        if (!muted) runCatching { track?.play() }
     }
 
     actual fun stop() {
         playRequested = false
         // pause() only, no flush(): flush() is meant for MODE_STREAM tracks and can throw on a
         // MODE_STATIC track — pausing is enough since this player only ever has one track/song.
-        track?.pause()
+        runCatching { track?.pause() }
     }
 
     actual fun setVolume(volume: Float) {
         this.volume = volume.coerceIn(0f, 1f)
-        track?.setVolume(this.volume)
+        runCatching { track?.setVolume(this.volume) }
     }
 
     actual fun setMuted(muted: Boolean) {
         this.muted = muted
         val t = track ?: return
         if (muted) {
-            t.pause()
+            runCatching { t.pause() }
         } else if (playRequested) {
-            t.play()
+            runCatching { t.play() }
         }
     }
 }

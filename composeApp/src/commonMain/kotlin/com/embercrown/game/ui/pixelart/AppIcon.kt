@@ -15,7 +15,7 @@ private const val OUTLINE = 'K'
  * "Embercrown" name to the art. Rendered to raster icon files by `IconExporter` in
  * desktopMain — no PNG is checked in.
  */
-fun appIcon(): PixelArt {
+fun oldAppIcon(): PixelArt {
     val g = PixelGridBuilder(S, S)
 
     // A large icon is viewed much closer/bigger than an in-game sprite, so every fill here uses

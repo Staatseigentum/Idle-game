@@ -45,9 +45,11 @@ actual class SoundPlayer actual constructor() {
         val pool = pools[id] ?: return
         val clip = pool.clips[pool.next]
         pool.next = (pool.next + 1) % pool.clips.size
-        clip.stop()
-        clip.framePosition = 0
-        clip.start()
+        runCatching {
+            clip.stop()
+            clip.framePosition = 0
+            clip.start()
+        }
     }
 
     actual fun setVolume(volume: Float) {
@@ -63,8 +65,17 @@ actual class SoundPlayer actual constructor() {
         val db = if (volume <= 0f) -80f else (20.0 * log10(volume.toDouble())).toFloat()
         clips.forEach { clip ->
             runCatching {
-                val control = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
-                control.value = db.coerceIn(control.minimum, control.maximum)
+                val gain = when {
+                    clip.isControlSupported(FloatControl.Type.MASTER_GAIN) ->
+                        clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                    clip.isControlSupported(FloatControl.Type.VOLUME) ->
+                        clip.getControl(FloatControl.Type.VOLUME) as FloatControl
+                    else -> null
+                }
+                if (gain != null) {
+                    gain.value = (if (gain.type == FloatControl.Type.VOLUME) volume else db)
+                        .coerceIn(gain.minimum, gain.maximum)
+                }
             }
         }
     }

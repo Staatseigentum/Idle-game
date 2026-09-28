@@ -1,6 +1,10 @@
 package com.embercrown.game.audio
 
-enum class SfxId { TAP, PURCHASE, DENY, ACHIEVEMENT, AGE_UP, DRAGON, OMEN }
+enum class SfxId {
+    TAP, PURCHASE, DENY, ACHIEVEMENT, AGE_UP, DRAGON, OMEN,
+    ASH_TAP, ASH_BUILD, ASH_MASTERY, ASH_RELIC, ASH_BEACON,
+    ASH_MARCH, ASH_RITUAL, ASH_OMEN, ASH_GUIDE, ASH_PAGE,
+}
 
 /** Short chiptune-style one-shots, synthesized once at first use — no external audio assets. */
 object SoundBank {

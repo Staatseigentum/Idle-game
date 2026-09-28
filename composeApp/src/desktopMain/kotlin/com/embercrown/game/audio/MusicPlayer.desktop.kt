@@ -36,7 +36,7 @@ actual class MusicPlayer actual constructor() {
 
     actual fun stop() {
         playRequested = false
-        clip?.stop()
+        runCatching { clip?.stop() }
     }
 
     actual fun setVolume(volume: Float) {
@@ -47,14 +47,16 @@ actual class MusicPlayer actual constructor() {
     actual fun setMuted(muted: Boolean) {
         this.muted = muted
         val c = clip ?: return
-        if (muted) c.stop() else if (playRequested) startLoop()
+        if (muted) runCatching { c.stop() } else if (playRequested) startLoop()
     }
 
     private fun startLoop() {
         val c = clip ?: return
-        if (!c.isRunning) {
-            c.framePosition = 0
-            c.loop(Clip.LOOP_CONTINUOUSLY)
+        runCatching {
+            if (!c.isRunning) {
+                c.framePosition = 0
+                c.loop(Clip.LOOP_CONTINUOUSLY)
+            }
         }
     }
 
@@ -62,8 +64,17 @@ actual class MusicPlayer actual constructor() {
         val c = clip ?: return
         val db = if (volume <= 0f) -80f else (20.0 * log10(volume.toDouble())).toFloat()
         runCatching {
-            val control = c.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
-            control.value = db.coerceIn(control.minimum, control.maximum)
+            val gain = when {
+                c.isControlSupported(FloatControl.Type.MASTER_GAIN) ->
+                    c.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                c.isControlSupported(FloatControl.Type.VOLUME) ->
+                    c.getControl(FloatControl.Type.VOLUME) as FloatControl
+                else -> null
+            }
+            if (gain != null) {
+                gain.value = (if (gain.type == FloatControl.Type.VOLUME) volume else db)
+                    .coerceIn(gain.minimum, gain.maximum)
+            }
         }
     }
 }

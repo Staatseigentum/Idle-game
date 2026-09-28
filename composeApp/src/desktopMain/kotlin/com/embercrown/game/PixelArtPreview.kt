@@ -2,6 +2,9 @@ package com.embercrown.game
 
 import com.embercrown.game.game.AgeDefinition
 import com.embercrown.game.game.BuildingDefinition
+import com.embercrown.game.reboot.RebootBuildings
+import com.embercrown.game.reboot.ashBuildingIcon
+import com.embercrown.game.reboot.ashKingdomArt
 import com.embercrown.game.ui.pixelart.PixelArt
 import com.embercrown.game.ui.pixelart.ageSceneArt
 import com.embercrown.game.ui.pixelart.buildingIcon
@@ -36,6 +39,21 @@ fun main(args: Array<String>) {
     writeArt(
         File(outDir, "age_last.png"),
         ageSceneArt(AgeDefinition.all.lastIndex, AgeDefinition.all.size),
+        scale = 5,
+    )
+
+    writeSheet(
+        file = File(outDir, "reboot_buildings.png"),
+        tiles = RebootBuildings.all.map { ashBuildingIcon(it.id, frame = 3) },
+        columns = 4,
+        scale = 6,
+        gap = 4,
+    )
+    writeArt(File(outDir, "reboot_beginning.png"), ashKingdomArt(emptyMap(), 10, false), scale = 5)
+    writeArt(
+        File(outDir, "reboot_complete.png"),
+        ashKingdomArt(RebootBuildings.all.associate { it.id to 1 }, 70, true,
+            RebootBuildings.all.associate { it.id to 2 }),
         scale = 5,
     )
 

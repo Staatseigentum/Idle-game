@@ -51,9 +51,11 @@ actual class SoundPlayer actual constructor() {
         val pool = pools[id] ?: return
         val track = pool.tracks[pool.next]
         pool.next = (pool.next + 1) % pool.tracks.size
-        track.stop()
-        track.reloadStaticData()
-        track.play()
+        runCatching {
+            if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+            track.reloadStaticData()
+            track.play()
+        }
     }
 
     actual fun setVolume(volume: Float) {
