@@ -12,6 +12,9 @@ on:
       tag:
         description: 'Existing tag to build and attach artifacts to (e.g. v0.0.1)'
         required: true
+      source_ref:
+        description: 'Optional source ref for rebuilding an existing release with a packaging fix'
+        required: false
 
 permissions:
   contents: write
@@ -33,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event.inputs.source_ref || github.event.inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -59,15 +62,16 @@ jobs:
         run: ./gradlew :composeApp:packageUberJarForCurrentOS --no-daemon
         shell: bash
 
-      # Native installer(s) for a fresh install: MSI on Windows, DMG on macOS, DEB+RPM on Linux.
+      # jpackage creates the Windows MSI only as an internal input for the branded EXE.
+      # DMG, DEB and RPM remain the public installers on macOS and Linux.
       # These package :launcher, not :composeApp — the installed app is the auto-updating
       # bootstrap, which downloads and runs the uber jar built above (see launcher/build.gradle.kts).
-      - name: Build native installer
+      - name: Build native package input
         shell: bash
         run: |
           set -euo pipefail
           case "${{ matrix.os_token }}" in
-            windows) ./gradlew :launcher:packageMsi --no-daemon ;;
+            windows) ./gradlew :launcher:packageWindowsSetup --no-daemon ;;
             macos)   ./gradlew :launcher:packageDmg --no-daemon ;;
             linux)   ./gradlew :launcher:packageDeb :launcher:packageRpm --no-daemon ;;
           esac
@@ -81,12 +85,17 @@ jobs:
           mkdir -p dist
           cp "$jar" "dist/Embercrown-${{ matrix.os_token }}.jar"
 
-          installers=$(find launcher/build/compose/binaries/main -type f \( -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \))
-          if [ -z "$installers" ]; then echo "no installer produced"; exit 1; fi
-          while IFS= read -r f; do
-            ext="${f##*.}"
-            cp "$f" "dist/Embercrown-${{ matrix.os_token }}.$ext"
-          done <<< "$installers"
+          if [ "${{ matrix.os_token }}" = windows ]; then
+            test -s build/installer/Embercrown-Setup.exe
+            cp build/installer/Embercrown-Setup.exe dist/Embercrown-windows-Setup.exe
+          else
+            installers=$(find launcher/build/compose/binaries/main -type f \( -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \))
+            if [ -z "$installers" ]; then echo "no installer produced"; exit 1; fi
+            while IFS= read -r f; do
+              ext="${f##*.}"
+              cp "$f" "dist/Embercrown-${{ matrix.os_token }}.$ext"
+            done <<< "$installers"
+          fi
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -100,7 +109,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event.inputs.source_ref || github.event.inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -147,7 +156,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          find staged -type f \( -name '*.jar' -o -name '*.apk' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist/ \;
+          find staged -type f \( -name '*.jar' -o -name '*.apk' -o -name '*.exe' -o -name '*.dmg' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist/ \;
           ls -la dist
 
       - name: Prepare player-facing release notes
@@ -208,8 +217,8 @@ jobs:
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Push Windows build (.msi)
-        run: butler push staged/desktop-windows/Embercrown-windows.msi "$ITCH_TARGET:windows" --userversion "${{ steps.version.outputs.version }}"
+      - name: Push Windows setup (.exe)
+        run: butler push staged/desktop-windows/Embercrown-windows-Setup.exe "$ITCH_TARGET:windows" --userversion "${{ steps.version.outputs.version }}"
 
       - name: Push macOS build (.dmg)
         run: butler push staged/desktop-macos/Embercrown-macos.dmg "$ITCH_TARGET:mac" --userversion "${{ steps.version.outputs.version }}"

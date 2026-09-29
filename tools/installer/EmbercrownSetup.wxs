@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
+  <!-- Keep this bundle UpgradeCode stable. The MSI has its own existing UpgradeCode. -->
+  <Bundle Name="Embercrown"
+          Version="$(var.Version)"
+          Manufacturer="Staatseigentum"
+          Copyright="Copyright 2026 Staatseigentum"
+          AboutUrl="https://staatseigentum.itch.io/embercrown"
+          HelpUrl="https://staatseigentum.itch.io/embercrown"
+          UpdateUrl="https://github.com/Staatseigentum/Idle-game/releases/latest"
+          IconSourceFile="$(var.IconPath)"
+          UpgradeCode="6F5A0442-F59C-4161-8B46-B8639E33B2BD"
+          DisableModify="button">
+    <Log Prefix="Embercrown-Setup" />
+    <!-- Matches jpackage's LocalAppDataFolder/Embercrown default while keeping
+         the directory chooser available in the public EXE. -->
+    <Variable Name="InstallFolder" Type="string" Value="[LocalAppDataFolder]Embercrown" Persisted="yes" />
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+      <bal:WixStandardBootstrapperApplication LicenseUrl=""
+                                               ThemeFile="$(var.ThemePath)"
+                                               LocalizationFile="$(var.LocalizationPath)"
+                                               SuppressOptionsUI="no"
+                                               ShowVersion="yes" />
+      <Payload SourceFile="$(var.CoverPath)" Name="cover.png" />
+      <Payload SourceFile="$(var.TitlebarPath)" Name="titlebar.png" />
+      <Payload SourceFile="$(var.TitlebarClosePath)" Name="titlebar-close.png" />
+      <Payload SourceFile="$(var.TitlebarMinimizePath)" Name="titlebar-minimize.png" />
+    </BootstrapperApplicationRef>
+    <Chain>
+      <!-- jpackage's MSI remains the only installer of files, shortcuts and the runtime.
+           Existing MSI installations upgrade through their unchanged MSI UpgradeCode. -->
+      <MsiPackage Id="EmbercrownMsi"
+                  SourceFile="$(var.MsiPath)"
+                  DisplayInternalUI="no"
+                  Visible="no"
+                  Vital="yes"
+                  Compressed="yes">
+        <MsiProperty Name="INSTALLDIR" Value="[InstallFolder]" />
+      </MsiPackage>
+    </Chain>
+  </Bundle>
+</Wix>

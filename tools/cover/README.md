@@ -17,6 +17,7 @@ No dependencies: `png.js` writes the PNG with Node's own `zlib`.
 | --- | --- |
 | `embercrown-cover-630x500.png` | itch.io cover image — its recommended size exactly |
 | `embercrown-cover-1260x1000.png` | same art at 10x, for press kits or resizing down |
+| `embercrown-cover-installer-314x249.png` | fitted art for the Windows setup theme; WiX clips oversized images |
 
 The art is authored at 126x100 and scaled by an integer factor, so every pixel stays a square at
 either size. Changing the aspect ratio means changing `W`/`H` in `cover.js` and re-laying out the

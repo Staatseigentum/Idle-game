@@ -269,6 +269,25 @@ function render(scale) {
   return { png: encodePng(buf, ow, oh), ow, oh };
 }
 
+// WiX's theme Image control clips rather than scaling, so the installer needs
+// an image at its exact display size. Sample the same authored grid nearest-
+// neighbour to keep all of the existing cover composition in frame.
+function renderFitted(ow, oh) {
+  const buf = Buffer.alloc(ow * oh * 4);
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const color = PALETTE[g.at(Math.floor(x * W / ow), Math.floor(y * H / oh))];
+      if (!color) throw new Error(`unmapped cover pixel at ${x}, ${y}`);
+      const o = (y * ow + x) * 4;
+      buf[o] = color[0];
+      buf[o + 1] = color[1];
+      buf[o + 2] = color[2];
+      buf[o + 3] = 255;
+    }
+  }
+  return { png: encodePng(buf, ow, oh), ow, oh };
+}
+
 const outDir = process.argv[2] || __dirname;
 fs.mkdirSync(outDir, { recursive: true });
 for (const [scale, name] of [
@@ -280,3 +299,7 @@ for (const [scale, name] of [
   fs.writeFileSync(file, png);
   console.log(`${file}  ${ow}x${oh}  ${(png.length / 1024).toFixed(1)} KB`);
 }
+const installer = renderFitted(314, 249);
+const installerFile = path.join(outDir, "embercrown-cover-installer-314x249.png");
+fs.writeFileSync(installerFile, installer.png);
+console.log(`${installerFile}  ${installer.ow}x${installer.oh}  ${(installer.png.length / 1024).toFixed(1)} KB`);

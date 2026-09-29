@@ -139,3 +139,19 @@ compose.desktop {
 tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
     dependsOn(":composeApp:generateIcons")
 }
+
+// The MSI is an internal jpackage input. This is the single Windows packaging
+// entry point for local builds and releases, producing the branded public EXE.
+tasks.register<Exec>("packageWindowsSetup") {
+    group = "distribution"
+    description = "Build the branded Embercrown Windows setup EXE"
+    dependsOn("packageMsi")
+    val msi = layout.buildDirectory.file("compose/binaries/main/msi/Embercrown-$appVersion.msi")
+    workingDir = rootProject.projectDir
+    commandLine(
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", rootProject.file("tools/installer/build.ps1").absolutePath,
+        "-Version", appVersion,
+        "-MsiPath", msi.get().asFile.absolutePath,
+    )
+}

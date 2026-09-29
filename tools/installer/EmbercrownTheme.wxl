@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Based on WiX 3 WixStdBA's en-us theme localization.
+     Copyright (c) .NET Foundation and contributors. Licensed under the
+     Microsoft Reciprocal License; see the WiX 3 LICENSE.TXT. -->
+<WixLocalization Culture="en-us" Language="1033" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Caption">Embercrown Setup</String>
+  <String Id="Title">Embercrown</String>
+  <String Id="InstallHeader">Welcome</String>
+  <String Id="InstallMessage">Setup will install Embercrown on your computer.</String>
+  <String Id="InstallVersion">Version [WixBundleVersion]</String>
+  <String Id="ConfirmCancelMessage">Do you really want to let the kingdom burn?</String>
+  <String Id="ExecuteUpgradeRelatedBundleMessage">Previous version</String>
+  <String Id="HelpHeader">Setup Help</String>
+  <String Id="HelpText">/install | /repair | /uninstall | /layout [directory] - installs, repairs, uninstalls or creates a local copy of the bundle. Install is the default.
+
+/passive | /quiet - displays minimal UI or no UI.
+/norestart - suppresses a restart request.
+/log log.txt - writes the setup log to the chosen path.</String>
+  <String Id="HelpCloseButton">DEMISE YOUR FATE</String>
+  <String Id="InstallLicenseLinkText">Embercrown &lt;a href="#"&gt;license terms&lt;/a&gt;.</String>
+  <String Id="InstallAcceptCheckbox">I &amp;agree to the license terms and conditions</String>
+  <String Id="InstallOptionsButton">&amp;Options</String>
+  <String Id="InstallInstallButton">REIGN</String>
+  <String Id="InstallCloseButton">DEMISE YOUR FATE</String>
+  <String Id="OptionsHeader">Setup Options</String>
+  <String Id="OptionsLocationLabel">Install location:</String>
+  <String Id="OptionsBrowseButton">&amp;Browse</String>
+  <String Id="OptionsOkButton">&amp;OK</String>
+  <String Id="OptionsCancelButton">&amp;Cancel</String>
+  <String Id="ProgressHeader">Setup Progress</String>
+  <String Id="ProgressLabel">Processing:</String>
+  <String Id="OverallProgressPackageText">Initializing...</String>
+  <String Id="ProgressCancelButton">&amp;Cancel</String>
+  <String Id="ModifyHeader">Modify Setup</String>
+  <String Id="ModifyRepairButton">&amp;Repair</String>
+  <String Id="ModifyUninstallButton">&amp;Uninstall</String>
+  <String Id="ModifyCloseButton">DEMISE YOUR FATE</String>
+  <String Id="SuccessRepairHeader">Repair Successfully Completed</String>
+  <String Id="SuccessUninstallHeader">Uninstall Successfully Completed</String>
+  <String Id="SuccessInstallHeader">Installation Successfully Completed</String>
+  <String Id="SuccessHeader">Setup Successful</String>
+  <String Id="SuccessLaunchButton">&amp;Launch</String>
+  <String Id="SuccessRestartText">You must restart your computer before you can use the software.</String>
+  <String Id="SuccessRestartButton">&amp;Restart</String>
+  <String Id="SuccessCloseButton">DEMISE YOUR FATE</String>
+  <String Id="FailureHeader">Setup Failed</String>
+  <String Id="FailureInstallHeader">Setup Failed</String>
+  <String Id="FailureUninstallHeader">Uninstall Failed</String>
+  <String Id="FailureRepairHeader">Repair Failed</String>
+  <String Id="FailureHyperlinkLogText">Setup failed. Please fix the issue and retry. For details, open the &lt;a href="#"&gt;log file&lt;/a&gt;.</String>
+  <String Id="FailureRestartText">You must restart your computer to complete the rollback.</String>
+  <String Id="FailureRestartButton">&amp;Restart</String>
+  <String Id="FailureCloseButton">DEMISE YOUR FATE</String>
+  <String Id="FilesInUseHeader">Files In Use</String>
+  <String Id="FilesInUseLabel">The following applications are using files that need to be updated:</String>
+  <String Id="FilesInUseCloseRadioButton">Close the &amp;applications and attempt to restart them.</String>
+  <String Id="FilesInUseDontCloseRadioButton">&amp;Do not close applications. A reboot will be required.</String>
+  <String Id="FilesInUseOkButton">&amp;OK</String>
+  <String Id="FilesInUseCancelButton">&amp;Cancel</String>
+  <String Id="ErrorFailNoActionReboot">A system restart is required before setup can continue.</String>
+</WixLocalization>
