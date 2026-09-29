@@ -1,5 +1,23 @@
 # Embercrown changelog
 
+## 0.5.0 — The Black Court
+
+The roads beyond the firelight are open. This update adds new ways to grow your first reign and a longer endgame after the Eclipse Siege.
+
+- Six new animated buildings, from the Ember Orchard and Scout Lodge to the Shadow Foundry and Court Observatory. Each has a Forge or utility specialization.
+- Three new Lost Marches regions with expeditions, sieges, outposts and one-time choices: keep extra fragments or light watchfires to fight gloom.
+- Crown Patrols defend the realm, clear gloom and return with guaranteed fragments, including while you are away.
+- Five Black Court lords follow the Eclipse Siege. Prepare the right tactic and meet each lord's requirements; victories grant relics and lasting strength.
+- Seven new Royal Orders, two new Crown Trials, seven Chronicle discoveries and three cosmetic looks.
+- Save a building blueprint and buy toward it in later reigns. The plan survives the Ash Ritual, but rebuilding still costs embers.
+- The Crown Guide now explains why gloom matters, when to send patrols and what the Ash Ritual resets or preserves. You can review those chapters in System.
+- The Beacon now sits beside your realm's vital signs, so you can stoke it without hunting through a sidebar. On desktop, the left side is organized into Goals, Realm, Power and Crown tabs.
+- The Ash Ritual no longer asks you to let gloom rise. A new cinematic burns the kingdom, shatters the crown, falls silent in ash and rekindles the next reign, with separate sounds for the gathering fire, impact and rebirth.
+- After each ritual, a new Prestige screen pauses the kingdom while you spend or save relics and choose your relic set. Permanent powers can only be upgraded there; higher ranks cost more, and only one power can be fully mastered in your first Prestige. Crown Seals now boost the first reign more strongly to keep its pacing intact.
+- The offline report now notes completed patrols.
+
+**Your save is safe:** Existing Ash Kingdom saves load in 0.5.0. No reset is required.
+
 ## 0.4.0 — The Eclipse Siege
 
 The kingdom has more to build, more to remember, and one last battle to survive.

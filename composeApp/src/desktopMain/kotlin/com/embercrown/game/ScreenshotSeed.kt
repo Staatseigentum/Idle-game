@@ -19,7 +19,7 @@ import java.util.prefs.Preferences
 fun main(args: Array<String>) {
     val profile = args.firstOrNull() ?: error("Pass one isolated profile name")
     val mode = args.getOrNull(1) ?: "showcase"
-    require(args.size in 1..2 && mode in setOf("showcase", "fresh", "all-achievements"))
+    require(args.size in 1..2 && mode in setOf("showcase", "fresh", "all-achievements", "pre-ritual"))
     require(Regex("[A-Za-z0-9_-]{1,48}").matches(profile))
     val profileNode = Preferences.userRoot().node("com/embercrown/game/profiles/$profile")
     if (mode == "all-achievements") {
@@ -27,7 +27,40 @@ fun main(args: Array<String>) {
             "Refusing to overwrite an existing achievement preview profile"
         }
     }
-    val state = if (mode == "fresh") RebootState(
+    val state = if (mode == "pre-ritual") RebootState(
+        embers = 2_400_000_000_000.0,
+        lifetimeEmbers = 3_200_000_000_000.0,
+        levels = RebootBuildings.all.associate { building -> building.id to when (building.id) {
+            "coalpit", "emberorchard", "hollowmill", "lanternwatch" -> 24
+            "eclipsethrone" -> 1
+            else -> 8
+        } },
+        buildingUpgrades = mapOf("coalpit" to 2, "lanternwatch" to 1,
+            "scoutlodge" to 1, "shadowfoundry" to 1),
+        claimedMilestones = RebootMilestones.all.map { it.id }.toSet(),
+        relics = 15,
+        reign = 1,
+        gloom = 24.0,
+        omenCountdownSeconds = 3_600,
+        beaconsLit = 3,
+        patrolsCompleted = 2,
+        runPatrols = 2,
+        lastPatrolReward = 2,
+        fragments = mapOf("forest" to 11, "glassfields" to 7, "fen" to 5),
+        conqueredRegions = setOf("forest", "glassfields"),
+        outpostLevels = mapOf("forest" to 1),
+        craftedArtifacts = setOf("cinder_crown"),
+        equippedArtifacts = setOf("cinder_crown"),
+        specializations = mapOf("coalpit" to "industry", "scoutlodge" to "utility"),
+        blueprintLevels = mapOf("coalpit" to 20, "emberorchard" to 15,
+            "hollowmill" to 12, "lanternwatch" to 10),
+        guideSeen = setOf("gloom", "patrol"),
+        tutorialStep = TUTORIAL_DONE,
+        tutorialAcknowledged = true,
+        runSeconds = 10_200.0,
+        playedSeconds = 10_200.0,
+        lastPlayedEpochSeconds = nowEpochSeconds(),
+    ) else if (mode == "fresh") RebootState(
         tutorialStep = 0,
         tutorialAcknowledged = false,
         lastPlayedEpochSeconds = nowEpochSeconds(),
@@ -90,7 +123,7 @@ fun main(args: Array<String>) {
         lastPlayedEpochSeconds = nowEpochSeconds(),
     )
     profileNode.put("embercrown_ash_kingdom_v1", Json.encodeToString(state))
-    profileNode.put("embercrown_language_v1", "en")
+    profileNode.put("embercrown_language_v1", if (mode == "pre-ritual") "de" else "en")
     profileNode.flush()
     println("Seeded $mode preview profile: $profile")
 }

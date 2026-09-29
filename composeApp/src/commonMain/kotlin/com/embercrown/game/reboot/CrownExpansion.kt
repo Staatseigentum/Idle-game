@@ -16,11 +16,19 @@ object RoyalOrders {
         RoyalOrder("beacon_watch", 35_000.0) { it.runBeacons >= 2 },
         RoyalOrder("first_march", 110_000.0) { it.runExpeditions >= 1 },
         RoyalOrder("first_banner", 500_000.0) { it.conqueredRegions.isNotEmpty() },
+        RoyalOrder("first_patrol", 90_000.0) { it.runPatrols >= 1 },
+        RoyalOrder("glass_road", 3_000_000.0) { "glassfields" in it.conqueredRegions },
+        RoyalOrder("first_choice", 5_000_000.0) { it.runMarchEvents >= 1 },
+        RoyalOrder("night_caravan", 28_000_000.0) { it.runPatrols >= 5 },
+        RoyalOrder("black_pass", 8_000_000_000.0) { "blackpass" in it.conqueredRegions },
+        RoyalOrder("court_watch", 60_000_000_000.0) { it.level("courtobservatory") >= 3 },
+        RoyalOrder("last_oath", 200_000_000_000.0) { it.courtVictories.isNotEmpty() },
     )
 }
 
 fun royalOrderReward(state: RebootState, order: RoyalOrder): Double =
-    maxOf(order.reward, minOf(order.reward * 3.0, rawProduction(state) * 30.0))
+    maxOf(order.reward, minOf(order.reward * 3.0, rawProduction(state) * 30.0)) *
+        (if (state.specializations["ashmarket"] == "utility") 1.2 else 1.0)
 
 fun claimRoyalOrder(state: RebootState, id: String): RebootState {
     val order = RoyalOrders.all.firstOrNull { it.id == id } ?: return state
@@ -39,10 +47,10 @@ data class CrownDistrict(val id: String, val baseCost: Double, val unlockAt: Dou
 object CrownDistricts {
     const val MAX_LEVEL = 3
     val all = listOf(
-        CrownDistrict("hearth", 300.0, 100.0, setOf("coalpit", "hollowmill")),
-        CrownDistrict("bell", 12_000.0, 7_000.0, setOf("belltower", "moonforge")),
-        CrownDistrict("bone", 1_000_000.0, 500_000.0, setOf("bonelibrary", "citadel")),
-        CrownDistrict("storm", 10_000_000_000.0, 5_000_000_000.0, setOf("stormspire", "wyrmroost")),
+        CrownDistrict("hearth", 300.0, 100.0, setOf("coalpit", "emberorchard", "hollowmill")),
+        CrownDistrict("bell", 12_000.0, 7_000.0, setOf("lanternwatch", "belltower", "ashmarket", "moonforge")),
+        CrownDistrict("bone", 1_000_000.0, 500_000.0, setOf("scoutlodge", "bonelibrary", "citadel", "shadowfoundry")),
+        CrownDistrict("storm", 10_000_000_000.0, 5_000_000_000.0, setOf("stormspire", "courtobservatory", "wyrmroost")),
     )
 }
 
@@ -119,7 +127,7 @@ fun hasArtifact(state: RebootState, id: String): Boolean = id in state.equippedA
 
 /** Trials are chosen for the next reign and only reward a completed Ash Ritual. */
 object CrownTrials {
-    val all = listOf("cinders", "night", "marches")
+    val all = listOf("cinders", "night", "marches", "watchfires", "architect")
 }
 
 fun selectNextTrial(state: RebootState, id: String?): RebootState =
@@ -128,6 +136,8 @@ fun selectNextTrial(state: RebootState, id: String?): RebootState =
 
 fun trialGoalMet(state: RebootState): Boolean = when (state.activeTrialId) {
     "marches" -> state.conqueredRegions.size >= 2
+    "watchfires" -> state.runPatrols >= 3
+    "architect" -> CrownDistricts.all.all { (state.districtLevels[it.id] ?: 0) >= 2 }
     else -> true
 }
 
@@ -138,7 +148,7 @@ fun canAdvanceEclipseSiege(state: RebootState): Boolean {
     val stage = state.eclipseSiegeStage
     if (stage !in eclipseSiegeCosts.indices || state.embers < eclipseSiegeCosts[stage]) return false
     return when (stage) {
-        0 -> state.conqueredRegions.size == LostMarches.all.size && state.equippedArtifacts.isNotEmpty()
+        0 -> LostMarches.originalIds.all { it in state.conqueredRegions } && state.equippedArtifacts.isNotEmpty()
         1 -> state.outpostLevels.values.sum() >= 3
         else -> state.level("eclipsethrone") >= 1 && state.gloom <= 70.0
     }

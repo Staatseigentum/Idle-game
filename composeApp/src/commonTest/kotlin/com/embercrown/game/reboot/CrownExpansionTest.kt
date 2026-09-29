@@ -82,7 +82,7 @@ class CrownExpansionTest {
             buildingCost(RebootBuildings.byId("coalpit"), 0, trial.copy(activeTrialId = null)))
         val completed = performAshRitual(ready.copy(activeTrialId = "cinders"), now = 200L)
         assertTrue("cinders" in completed.completedTrials)
-        val auto = completed.copy(levels = mapOf("coalpit" to 5), tutorialStep = TUTORIAL_DONE)
+        val auto = finishPrestige(completed).copy(levels = mapOf("coalpit" to 5), tutorialStep = TUTORIAL_DONE)
         val earned = advanceReboot(auto, 5.0, active = false, now = 205L)
         assertTrue(earned.embers > production(auto) * 5.0)
         assertEquals(0.0, earned.autoStokeSeconds)

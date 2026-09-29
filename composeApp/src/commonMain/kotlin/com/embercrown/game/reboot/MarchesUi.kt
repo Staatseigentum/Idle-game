@@ -67,6 +67,7 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
                     Modifier.fillMaxSize(), fit = PixelFit.Contain)
             }
         }
+        PatrolPanel(state)
         state.expedition?.let { active ->
             Body(stringResource(Res.string.march_active, stringResource(marchTitle(active.regionId)),
                 active.remainingSeconds), AshPalette.teal)
@@ -75,6 +76,7 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
             Body(stringResource(Res.string.march_result, state.lastExpeditionReward,
                 stringResource(marchTitle(id))), AshPalette.flameLight)
         }
+        MarchEventPanel(state)
         Rule()
         Label(stringResource(Res.string.march_role), AshPalette.teal, 8)
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -103,7 +105,7 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
         Rule()
         EclipseSiegePanel(state)
         Rule()
-        RelicSetPanel(state)
+        BlackCourtPanel(state)
         Spacer(Modifier.height(14.dp))
     }
 }
@@ -113,7 +115,7 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
     val open = state.lifetimeEmbers >= region.unlockAt
     val conquered = region.id in state.conqueredRegions
     val title = stringResource(marchTitle(region.id))
-    val buildingId = marchSpecializations.entries.first { it.value == region.id }.key
+    val specialistBuildings = marchSpecializations.filterValues { it == region.id }.keys
     Column(
         modifier = Modifier.fillMaxWidth().background(if (conquered) AshPalette.panelRaised else AshPalette.panel)
             .border(1.dp, if (conquered) AshPalette.teal else if (open) AshPalette.flame else AshPalette.edge)
@@ -131,7 +133,8 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
         Body(stringResource(Res.string.march_duration, expeditionDuration(region, state, role)))
         AshButton(
             label = stringResource(Res.string.march_expedition, formatAmount(region.expeditionCost)),
-            enabled = state.expedition == null && state.embers >= region.expeditionCost,
+            enabled = state.expedition == null && state.pendingMarchEventId == null &&
+                state.embers >= region.expeditionCost,
             modifier = Modifier.fillMaxWidth(),
             onClick = { RebootGraph.engine.startExpedition(region.id, role, daring) },
         )
@@ -146,23 +149,25 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
                 modifier = Modifier.fillMaxWidth(), onClick = { RebootGraph.engine.siege(region.id) },
             )
         }
-        Rule()
-        Label(stringResource(Res.string.march_specialize, stringResource(marchBuildingTitle(buildingId))),
-            AshPalette.flameLight, 8)
-        val chosen = state.specializations[buildingId]
-        if (chosen != null) {
-            Body(stringResource(if (chosen == "industry") Res.string.march_specialized_industry
-                else Res.string.march_specialized_utility), AshPalette.teal)
-        } else {
-            Body(stringResource(Res.string.march_specialize_need))
-            Body(stringResource(Res.string.march_industry), AshPalette.bone)
-            AshButton(stringResource(Res.string.march_choose_path), canSpecialize(state, buildingId),
-                modifier = Modifier.fillMaxWidth(), color = AshPalette.flame,
-                onClick = { RebootGraph.engine.specialize(buildingId, "industry") })
-            Body(stringResource(marchUtility(buildingId)), AshPalette.bone)
-            AshButton(stringResource(Res.string.march_choose_path), canSpecialize(state, buildingId),
-                modifier = Modifier.fillMaxWidth(), color = AshPalette.teal,
-                onClick = { RebootGraph.engine.specialize(buildingId, "utility") })
+        specialistBuildings.forEach { buildingId ->
+            Rule()
+            Label(stringResource(Res.string.march_specialize, stringResource(marchBuildingTitle(buildingId))),
+                AshPalette.flameLight, 8)
+            val chosen = state.specializations[buildingId]
+            if (chosen != null) {
+                Body(stringResource(if (chosen == "industry") Res.string.march_specialized_industry
+                    else Res.string.march_specialized_utility), AshPalette.teal)
+            } else {
+                Body(stringResource(Res.string.march_specialize_need))
+                Body(stringResource(Res.string.march_industry), AshPalette.bone)
+                AshButton(stringResource(Res.string.march_choose_path), canSpecialize(state, buildingId),
+                    modifier = Modifier.fillMaxWidth(), color = AshPalette.flame,
+                    onClick = { RebootGraph.engine.specialize(buildingId, "industry") })
+                Body(stringResource(marchUtility(buildingId)), AshPalette.bone)
+                AshButton(stringResource(Res.string.march_choose_path), canSpecialize(state, buildingId),
+                    modifier = Modifier.fillMaxWidth(), color = AshPalette.teal,
+                    onClick = { RebootGraph.engine.specialize(buildingId, "utility") })
+            }
         }
         if (conquered) {
             Rule()
@@ -172,16 +177,32 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
 }
 
 @Composable
-private fun RelicSetPanel(state: RebootState) {
+private fun MarchEventPanel(state: RebootState) {
+    val regionId = state.pendingMarchEventId ?: return
+    Column(Modifier.fillMaxWidth().background(AshPalette.panelRaised).border(2.dp, AshPalette.flame)
+        .padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Label(stringResource(Res.string.march_event_title), AshPalette.flameLight, 9)
+        Body(stringResource(Res.string.march_event_intro, stringResource(marchTitle(regionId))), AshPalette.bone)
+        Body(stringResource(Res.string.march_event_salvage, marchEventFragmentReward(regionId)), AshPalette.teal)
+        AshButton(stringResource(Res.string.march_event_salvage_button), true,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { RebootGraph.engine.chooseMarchEvent(0) })
+        Body(stringResource(Res.string.march_event_ward, marchEventGloomReward(regionId)), AshPalette.teal)
+        AshButton(stringResource(Res.string.march_event_ward_button), true,
+            color = AshPalette.teal, modifier = Modifier.fillMaxWidth(),
+            onClick = { RebootGraph.engine.chooseMarchEvent(1) })
+    }
+}
+
+@Composable
+internal fun RelicSetPanel(state: RebootState) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Label(stringResource(Res.string.march_sets), AshPalette.flameLight, 9)
         if (state.reign < 2) {
             Body(stringResource(Res.string.march_sets_locked))
             return@Column
         }
-        if (state.relicSetCooldownSeconds > 0) {
-            Body(stringResource(Res.string.march_sets_cooldown, state.relicSetCooldownSeconds))
-        }
+        Body(stringResource(Res.string.prestige_set_hint), AshPalette.muted)
         listOf("emberguard", "wayfarer", "nightveil").forEach { id ->
             val title = when (id) {
                 "emberguard" -> Res.string.march_set_emberguard
@@ -197,7 +218,7 @@ private fun RelicSetPanel(state: RebootState) {
             AshButton(
                 label = if (state.relicSetId == id) stringResource(Res.string.march_set_active)
                 else stringResource(shortTitle),
-                enabled = state.relicSetId != id && state.relicSetCooldownSeconds == 0,
+                enabled = state.prestigePending && state.relicSetId != id,
                 color = if (state.relicSetId == id) AshPalette.teal else AshPalette.panelRaised,
                 modifier = Modifier.fillMaxWidth(), onClick = { RebootGraph.engine.setRelicSet(id) },
             )
@@ -207,15 +228,21 @@ private fun RelicSetPanel(state: RebootState) {
 
 internal fun marchTitle(id: String): StringResource = when (id) {
     "forest" -> Res.string.march_forest
+    "glassfields" -> Res.string.march_glassfields
     "fen" -> Res.string.march_fen
     "coast" -> Res.string.march_coast
+    "blackpass" -> Res.string.march_blackpass
+    "court" -> Res.string.march_court
     else -> Res.string.march_ruins
 }
 
 private fun marchDescription(id: String): StringResource = when (id) {
     "forest" -> Res.string.march_forest_desc
+    "glassfields" -> Res.string.march_glassfields_desc
     "fen" -> Res.string.march_fen_desc
     "coast" -> Res.string.march_coast_desc
+    "blackpass" -> Res.string.march_blackpass_desc
+    "court" -> Res.string.march_court_desc
     else -> Res.string.march_ruins_desc
 }
 
@@ -225,11 +252,23 @@ private fun marchBuildingTitle(id: String): StringResource = when (id) {
     "soulharbor" -> Res.string.reboot_soulharbor
     "coalpit" -> Res.string.reboot_coalpit
     "bonelibrary" -> Res.string.reboot_bonelibrary
+    "emberorchard" -> Res.string.reboot_emberorchard
+    "lanternwatch" -> Res.string.reboot_lanternwatch
+    "ashmarket" -> Res.string.reboot_ashmarket
+    "scoutlodge" -> Res.string.reboot_scoutlodge
+    "shadowfoundry" -> Res.string.reboot_shadowfoundry
+    "courtobservatory" -> Res.string.reboot_courtobservatory
     else -> Res.string.reboot_citadel
 }
 
 private fun marchUtility(id: String): StringResource = when (id) {
     "coalpit" -> Res.string.march_utility_coalpit
+    "emberorchard" -> Res.string.march_utility_emberorchard
+    "lanternwatch" -> Res.string.march_utility_lanternwatch
+    "ashmarket" -> Res.string.march_utility_ashmarket
+    "scoutlodge" -> Res.string.march_utility_scoutlodge
+    "shadowfoundry" -> Res.string.march_utility_shadowfoundry
+    "courtobservatory" -> Res.string.march_utility_courtobservatory
     "moonforge" -> Res.string.march_utility_moonforge
     "bonelibrary" -> Res.string.march_utility_bonelibrary
     else -> Res.string.march_utility_citadel

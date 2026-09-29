@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -79,6 +80,12 @@ private enum class Page(val label: StringResource) {
 
 private enum class BuildMode { ONE, TEN, MAX }
 private enum class DesktopShelf { BUILDINGS, CHRONICLE, SYSTEM }
+private enum class LeftTab(val label: StringResource) {
+    GOALS(Res.string.reboot_left_goals),
+    REALM(Res.string.reboot_left_realm),
+    POWER(Res.string.reboot_left_power),
+    CROWN(Res.string.reboot_left_crown),
+}
 
 @Composable
 fun RebootApp() {
@@ -98,6 +105,7 @@ fun RebootApp() {
     var confirmRitual by remember { mutableStateOf(false) }
     var ritualRunning by remember { mutableStateOf(false) }
     var ritualYield by remember { mutableIntStateOf(0) }
+    var ritualBefore by remember { mutableStateOf<RebootState?>(null) }
     var buildMode by remember { mutableStateOf(BuildMode.ONE) }
     var showOmen by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
@@ -115,7 +123,9 @@ fun RebootApp() {
                 .padding(WindowInsets.safeDrawing.asPaddingValues()),
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                if (maxWidth >= 1020.dp) {
+                if (state.prestigePending && !ritualRunning) {
+                    PrestigeScreen(state, onContinue = RebootGraph.engine::beginNextReign)
+                } else if (maxWidth >= 1020.dp) {
                     DesktopKingdom(state = state, buildMode = buildMode, onBuildMode = { buildMode = it },
                         onOmen = { showOmen = true }, onRitual = { confirmRitual = true },
                         onReset = { confirmReset = true })
@@ -131,13 +141,18 @@ fun RebootApp() {
                 onConfirm = {
                     confirmRitual = false
                     ritualYield = ritualReward(state)
+                    ritualBefore = state
+                    RebootGraph.audio.play(SfxId.ASH_RITUAL_CHARGE)
                     ritualRunning = true
                 },
             )
             if (ritualRunning) RitualTransition(
+                before = ritualBefore ?: state,
                 reward = ritualYield,
+                onBurn = { RebootGraph.audio.play(SfxId.ASH_RITUAL_FIRE) },
                 onMidpoint = RebootGraph.engine::performRitual,
-                onFinished = { ritualRunning = false },
+                onRebirth = { RebootGraph.audio.play(SfxId.ASH_RITUAL_REBIRTH) },
+                onFinished = { ritualRunning = false; ritualBefore = null },
             )
             if (showOmen && state.pendingOmenId != null && !ritualRunning) OmenDialog(
                 state = state,
@@ -153,7 +168,7 @@ fun RebootApp() {
             )
             ChronicleToast(
                 earned = state.chronicleEntries,
-                hold = ritualRunning || showOmen || state.offlineSeconds >= 60 || state.tutorialStep < TUTORIAL_DONE,
+                hold = ritualRunning || state.prestigePending || showOmen || state.offlineSeconds >= 60 || state.tutorialStep < TUTORIAL_DONE,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
             )
             if (state.tutorialStep == 0) TutorialWelcome()
@@ -164,6 +179,7 @@ fun RebootApp() {
                     confirmReset = false
                     confirmRitual = false
                     ritualRunning = false
+                    ritualBefore = null
                     showOmen = false
                     buildMode = BuildMode.ONE
                 },
@@ -176,48 +192,74 @@ fun RebootApp() {
 private fun DesktopKingdom(state: RebootState, buildMode: BuildMode, onBuildMode: (BuildMode) -> Unit,
                            onOmen: () -> Unit, onRitual: () -> Unit, onReset: () -> Unit) {
     var shelf by remember { mutableStateOf(DesktopShelf.BUILDINGS) }
+    var leftTab by remember { mutableStateOf(LeftTab.GOALS) }
     var showMarches by remember { mutableStateOf(false) }
+    val leftScroll = rememberScrollState()
     val buildingsScroll = rememberScrollState()
     val chronicleScroll = rememberScrollState()
+    LaunchedEffect(state.reign) {
+        showMarches = false
+        shelf = DesktopShelf.BUILDINGS
+        leftTab = LeftTab.GOALS
+        leftScroll.scrollTo(0)
+        buildingsScroll.scrollTo(0)
+    }
     LaunchedEffect(state.tutorialStep) {
         if (state.tutorialStep in 1..4) {
             showMarches = false
             shelf = DesktopShelf.BUILDINGS
+            leftTab = LeftTab.GOALS
             buildingsScroll.animateScrollTo(0)
         }
     }
+    LaunchedEffect(leftTab) { leftScroll.scrollTo(0) }
     Column(modifier = Modifier.fillMaxSize()) {
         KingdomHeader(state, compact = false, onOmen = onOmen)
         Row(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.width(286.dp).fillMaxHeight().background(AshPalette.night)
-                    .border(width = 1.dp, color = AshPalette.edge.copy(alpha = 0.55f))
-                    .verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .border(width = 1.dp, color = AshPalette.edge.copy(alpha = 0.55f)),
             ) {
-                TutorialGuide(state)
-                Label(stringResource(Res.string.reboot_goal), AshPalette.flame, 9)
-                GoalText(state)
-                OmenBanner(state, onOmen)
-                MilestonePanel(state)
-                Rule()
-                RoyalOrdersPanel(state)
-                Rule()
-                CrownDistrictsPanel(state)
-                Rule()
-                Body(stringResource(Res.string.reboot_lore))
-                Rule()
-                BeaconPanel(state)
-                Rule()
-                EdictPanel(state)
-                Rule()
-                RelicForgePanel(state)
-                Rule()
-                CrownArtifactsPanel(state)
-                Rule()
-                CrownTrialsPanel(state)
-                Rule()
-                RitualPanel(state, onRitual)
+                LeftTabSelector(leftTab, canRitual(state)) { selected ->
+                    if (selected != leftTab) RebootGraph.audio.play(SfxId.ASH_PAGE)
+                    leftTab = selected
+                }
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(leftScroll).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    when (leftTab) {
+                        LeftTab.GOALS -> {
+                            TutorialGuide(state)
+                            ContextualGuide(state, onRitual = onRitual)
+                            Label(stringResource(Res.string.reboot_goal), AshPalette.flame, 9)
+                            GoalText(state)
+                            MilestonePanel(state)
+                            Rule()
+                            RoyalOrdersPanel(state)
+                        }
+                        LeftTab.REALM -> {
+                            OmenBanner(state, onOmen)
+                            CrownDistrictsPanel(state)
+                            Rule()
+                            PatrolPanel(state)
+                            Rule()
+                            EdictPanel(state)
+                        }
+                        LeftTab.POWER -> {
+                            CrownArtifactsPanel(state)
+                            Rule()
+                            CrownTrialsPanel(state)
+                        }
+                        LeftTab.CROWN -> {
+                            BlackCourtPanel(state)
+                            Rule()
+                            RitualPanel(state, onRitual)
+                            Rule()
+                            Body(stringResource(Res.string.reboot_lore))
+                        }
+                    }
+                }
             }
 
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -298,9 +340,33 @@ private fun DesktopKingdom(state: RebootState, buildMode: BuildMode, onBuildMode
 }
 
 @Composable
+private fun LeftTabSelector(selected: LeftTab, ritualReady: Boolean, onSelect: (LeftTab) -> Unit) {
+    Column(Modifier.fillMaxWidth().background(AshPalette.panel).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LeftTab.entries.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { tab ->
+                    AshButton(
+                        label = stringResource(tab.label), enabled = true,
+                        color = when {
+                            selected == tab -> AshPalette.flame
+                            tab == LeftTab.CROWN && ritualReady -> AshPalette.crimson
+                            else -> AshPalette.panelRaised
+                        },
+                        pulse = tab == LeftTab.CROWN && ritualReady && selected != tab,
+                        modifier = Modifier.weight(1f), onClick = { onSelect(tab) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode: (BuildMode) -> Unit,
                           onOmen: () -> Unit, onRitual: () -> Unit, onReset: () -> Unit) {
     var page by remember { mutableStateOf(Page.KINGDOM) }
+    LaunchedEffect(state.reign) { page = Page.KINGDOM }
     LaunchedEffect(state.tutorialStep) {
         when (state.tutorialStep) {
             1 -> page = Page.KINGDOM
@@ -310,6 +376,8 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
     Column(modifier = Modifier.fillMaxSize()) {
         KingdomHeader(state, compact = true, onOmen = onOmen)
         TutorialGuide(state, modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp))
+        ContextualGuide(state, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            onRitual = onRitual)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             Crossfade(targetState = page, modifier = Modifier.fillMaxSize(), animationSpec = tween(220)) { currentPage ->
             when (currentPage) {
@@ -327,7 +395,7 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                         RoyalOrdersPanel(state)
                         Rule()
                         CrownDistrictsPanel(state)
-                        BeaconPanel(state)
+                        PatrolPanel(state)
                         EdictPanel(state)
                     }
                 }
@@ -348,15 +416,13 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                     Body(stringResource(Res.string.reboot_lore))
                     MilestonePanel(state)
                     Rule()
-                    RelicForgePanel(state)
-                    Rule()
                     CrownArtifactsPanel(state)
                     Rule()
                     CrownTrialsPanel(state)
                     Rule()
-                    RitualPanel(state, onRitual)
+                    BlackCourtPanel(state)
                     Rule()
-                    BeaconPanel(state)
+                    RitualPanel(state, onRitual)
                 }
                 Page.CHRONICLE -> Column(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
@@ -438,6 +504,8 @@ private fun KingdomHeader(state: RebootState, compact: Boolean, onOmen: () -> Un
             Spacer(Modifier.width(8.dp))
             Label("${state.gloom.toInt()}%", AshPalette.ash, 7)
         }
+        Spacer(Modifier.height(9.dp))
+        BeaconQuickAction(state, compact)
         if (state.omenEffectSeconds > 0) {
             Spacer(Modifier.height(7.dp))
             Label(stringResource(Res.string.reboot_omen_active, state.omenEffectSeconds), AshPalette.teal, 7)
@@ -628,10 +696,11 @@ private fun MilestonePanel(state: RebootState) {
 }
 
 @Composable
-private fun RelicForgePanel(state: RebootState) {
+internal fun RelicForgePanel(state: RebootState) {
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Label(stringResource(Res.string.reboot_relic_forge), AshPalette.flameLight, 9)
-        Body(stringResource(Res.string.reboot_relic_forge_hint), AshPalette.muted)
+        Body(stringResource(if (state.reign == 2) Res.string.prestige_first_rank_hint
+            else Res.string.reboot_relic_forge_hint), AshPalette.muted)
         RelicPowers.all.forEach { power ->
             val nameAndDesc = when (power.id) {
                 "cinderheart" -> Res.string.reboot_power_cinderheart to Res.string.reboot_power_cinderheart_desc
@@ -642,6 +711,7 @@ private fun RelicForgePanel(state: RebootState) {
             }
             val rank = state.relicRank(power.id)
             val cost = relicPowerCost(power, state)
+            val rankLimit = relicPowerRankLimit(power, state)
             Column(
                 modifier = Modifier.fillMaxWidth().background(AshPalette.panel)
                     .border(1.dp, if (rank == power.maxRank) AshPalette.teal else AshPalette.edge)
@@ -652,9 +722,12 @@ private fun RelicForgePanel(state: RebootState) {
                 Body(stringResource(nameAndDesc.second), AshPalette.muted)
                 Body(stringResource(Res.string.reboot_rank, rank, power.maxRank), AshPalette.teal)
                 AshButton(
-                    label = if (rank == power.maxRank) stringResource(Res.string.reboot_maxed)
-                    else stringResource(Res.string.reboot_relic_cost, cost),
-                    enabled = rank < power.maxRank && state.relics >= cost,
+                    label = when {
+                        rank == power.maxRank -> stringResource(Res.string.reboot_maxed)
+                        rank >= rankLimit -> stringResource(Res.string.prestige_rank_locked)
+                        else -> stringResource(Res.string.reboot_relic_cost, cost)
+                    },
+                    enabled = state.prestigePending && rank < rankLimit && state.relics >= cost,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { RebootGraph.engine.buyRelicPower(power.id) },
                 )
@@ -667,15 +740,21 @@ private fun RelicForgePanel(state: RebootState) {
 private fun StructureCard(state: RebootState, building: RebootBuilding, mode: BuildMode, compact: Boolean) {
     val name = when (building.id) {
         "coalpit" -> Res.string.reboot_coalpit to Res.string.reboot_coalpit_desc
+        "emberorchard" -> Res.string.reboot_emberorchard to Res.string.reboot_emberorchard_desc
         "hollowmill" -> Res.string.reboot_hollowmill to Res.string.reboot_hollowmill_desc
+        "lanternwatch" -> Res.string.reboot_lanternwatch to Res.string.reboot_lanternwatch_desc
         "belltower" -> Res.string.reboot_belltower to Res.string.reboot_belltower_desc
+        "ashmarket" -> Res.string.reboot_ashmarket to Res.string.reboot_ashmarket_desc
         "moonforge" -> Res.string.reboot_moonforge to Res.string.reboot_moonforge_desc
+        "scoutlodge" -> Res.string.reboot_scoutlodge to Res.string.reboot_scoutlodge_desc
         "bonelibrary" -> Res.string.reboot_bonelibrary to Res.string.reboot_bonelibrary_desc
         "citadel" -> Res.string.reboot_citadel to Res.string.reboot_citadel_desc
+        "shadowfoundry" -> Res.string.reboot_shadowfoundry to Res.string.reboot_shadowfoundry_desc
         "emberwell" -> Res.string.reboot_emberwell to Res.string.reboot_emberwell_desc
         "gravegarden" -> Res.string.reboot_gravegarden to Res.string.reboot_gravegarden_desc
         "soulharbor" -> Res.string.reboot_soulharbor to Res.string.reboot_soulharbor_desc
         "stormspire" -> Res.string.reboot_stormspire to Res.string.reboot_stormspire_desc
+        "courtobservatory" -> Res.string.reboot_courtobservatory to Res.string.reboot_courtobservatory_desc
         "wyrmroost" -> Res.string.reboot_wyrmroost to Res.string.reboot_wyrmroost_desc
         else -> Res.string.reboot_eclipsethrone to Res.string.reboot_eclipsethrone_desc
     }
@@ -792,21 +871,38 @@ private fun StructureCard(state: RebootState, building: RebootBuilding, mode: Bu
 }
 
 @Composable
-private fun BeaconPanel(state: RebootState) {
-    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Label(stringResource(Res.string.reboot_beacon), AshPalette.flameLight, 9)
-        val status = when {
-            state.beaconSeconds > 0 -> stringResource(Res.string.reboot_beacon_active, state.beaconSeconds)
-            state.beaconCooldownSeconds > 0 -> stringResource(Res.string.reboot_beacon_cooldown, state.beaconCooldownSeconds)
-            else -> stringResource(Res.string.reboot_beacon_ready)
+private fun BeaconQuickAction(state: RebootState, compact: Boolean) {
+    val cost = beaconCost(state)
+    val ready = state.beaconSeconds == 0 && state.beaconCooldownSeconds == 0 && state.embers >= cost
+    val status = when {
+        state.beaconSeconds > 0 -> stringResource(Res.string.reboot_beacon_active, state.beaconSeconds)
+        state.beaconCooldownSeconds > 0 -> stringResource(Res.string.reboot_beacon_cooldown, state.beaconCooldownSeconds)
+        else -> stringResource(Res.string.reboot_beacon_ready)
+    }
+    val action = if (state.beaconSeconds > 0) stringResource(Res.string.reboot_beacon_burning)
+        else stringResource(Res.string.reboot_beacon_cost, formatAmount(cost))
+    val pulse = ready && state.gloom >= 18.0 && state.beaconsLit == 0 &&
+        state.tutorialStep >= TUTORIAL_DONE
+    val frame = Modifier.fillMaxWidth().background(AshPalette.panel)
+        .border(1.dp, if (ready && state.gloom >= 55.0) AshPalette.flame else AshPalette.edge)
+        .padding(7.dp)
+    if (compact) {
+        Column(frame, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Label(stringResource(Res.string.reboot_beacon_short), AshPalette.flameLight, 8)
+            Body(status, if (state.beaconSeconds > 0) AshPalette.teal else AshPalette.muted)
+            AshButton(action, ready, color = AshPalette.flame, pulse = pulse,
+                modifier = Modifier.fillMaxWidth(), onClick = RebootGraph.engine::stokeBeacon)
         }
-        Body(status)
-        AshButton(
-            label = "${stringResource(Res.string.reboot_beacon)} · ${formatAmount(beaconCost(state))}",
-            enabled = state.beaconCooldownSeconds == 0 && state.embers >= beaconCost(state),
-            modifier = Modifier.fillMaxWidth(),
-            onClick = RebootGraph.engine::stokeBeacon,
-        )
+    } else {
+        Row(frame, verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Label(stringResource(Res.string.reboot_beacon_short), AshPalette.flameLight, 8)
+                Body(status, if (state.beaconSeconds > 0) AshPalette.teal else AshPalette.muted)
+            }
+            AshButton(action, ready, color = AshPalette.flame, pulse = pulse,
+                modifier = Modifier.width(246.dp), onClick = RebootGraph.engine::stokeBeacon)
+        }
     }
 }
 
@@ -834,12 +930,15 @@ private fun RitualPanel(state: RebootState, onRitual: () -> Unit) {
 @Composable
 private fun SystemPanel(onReset: () -> Unit) {
     val uiSettings by RebootGraph.uiSettings.state.collectAsState()
+    val state by RebootGraph.engine.state.collectAsState()
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Label(stringResource(Res.string.reboot_tab_settings), AshPalette.bone, 12)
         Body(stringResource(Res.string.reboot_saved))
+        BlueprintPanel(state)
+        GuideLibrary(state)
         Label(stringResource(Res.string.reboot_language), AshPalette.flameLight, 9)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(null to stringResource(Res.string.reboot_language_system), "de" to "DE", "en" to "EN").forEach { (code, name) ->
@@ -910,12 +1009,13 @@ private fun RitualConfirmation(reward: Int, onCancel: () -> Unit, onConfirm: () 
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.width(340.dp).border(2.dp, AshPalette.crimson)
+            modifier = Modifier.widthIn(max = 340.dp).fillMaxWidth(0.92f).border(2.dp, AshPalette.crimson)
                 .background(AshPalette.panel).clickable { }.padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Label(stringResource(Res.string.reboot_ritual), AshPalette.flameLight, 12)
             Body(stringResource(Res.string.reboot_ritual_confirm, reward), AshPalette.bone)
+            Body(stringResource(Res.string.guide_ritual_preview), AshPalette.muted)
             AshButton(
                 label = stringResource(Res.string.reboot_confirm), enabled = true,
                 color = AshPalette.crimson, modifier = Modifier.fillMaxWidth(), onClick = onConfirm,

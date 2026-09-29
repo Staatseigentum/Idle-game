@@ -138,7 +138,11 @@ internal fun CrownTrialsPanel(state: RebootState) {
         }
         state.activeTrialId?.let { active ->
             Body(stringResource(Res.string.exp_trial_active, stringResource(trialTitle(active))), AshPalette.flameLight)
-            if (active == "marches" && !trialGoalMet(state)) Body(stringResource(Res.string.exp_trial_marches_goal))
+            if (!trialGoalMet(state)) Body(stringResource(when (active) {
+                "marches" -> Res.string.exp_trial_marches_goal
+                "watchfires" -> Res.string.exp_trial_watchfires_goal
+                else -> Res.string.exp_trial_architect_goal
+            }))
         }
         Body(stringResource(Res.string.exp_trial_next,
             state.nextTrialId?.let { stringResource(trialTitle(it)) } ?: stringResource(Res.string.exp_trial_none)), AshPalette.teal)
@@ -199,6 +203,13 @@ private fun orderTitle(id: String): StringResource = when (id) {
     "bell_watch" -> Res.string.exp_order_bell_watch
     "beacon_watch" -> Res.string.exp_order_beacon_watch
     "first_march" -> Res.string.exp_order_first_march
+    "first_patrol" -> Res.string.exp_order_first_patrol
+    "glass_road" -> Res.string.exp_order_glass_road
+    "first_choice" -> Res.string.exp_order_first_choice
+    "night_caravan" -> Res.string.exp_order_night_caravan
+    "black_pass" -> Res.string.exp_order_black_pass
+    "court_watch" -> Res.string.exp_order_court_watch
+    "last_oath" -> Res.string.exp_order_last_oath
     else -> Res.string.exp_order_first_banner
 }
 
@@ -233,11 +244,15 @@ private fun artifactDescription(id: String): StringResource = when (id) {
 private fun trialTitle(id: String): StringResource = when (id) {
     "cinders" -> Res.string.exp_trial_cinders
     "night" -> Res.string.exp_trial_night
-    else -> Res.string.exp_trial_marches
+    "marches" -> Res.string.exp_trial_marches
+    "watchfires" -> Res.string.exp_trial_watchfires
+    else -> Res.string.exp_trial_architect
 }
 
 private fun trialDescription(id: String): StringResource = when (id) {
     "cinders" -> Res.string.exp_trial_cinders_desc
     "night" -> Res.string.exp_trial_night_desc
-    else -> Res.string.exp_trial_marches_desc
+    "marches" -> Res.string.exp_trial_marches_desc
+    "watchfires" -> Res.string.exp_trial_watchfires_desc
+    else -> Res.string.exp_trial_architect_desc
 }

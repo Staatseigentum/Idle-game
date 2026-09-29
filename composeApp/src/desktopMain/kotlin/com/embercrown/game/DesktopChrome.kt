@@ -87,7 +87,7 @@ internal fun WindowScope.EmberTitleBar(state: WindowState, icon: Painter, onClos
             Image(painter = icon, contentDescription = null, modifier = Modifier.size(20.dp))
             Text("EMBERCROWN", color = AshPalette.flameLight,
                 fontFamily = font, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text("${BuildInfo.VERSION}  /  THE ECLIPSE SIEGE", color = AshPalette.muted,
+            Text("${BuildInfo.VERSION}  /  THE BLACK COURT", color = AshPalette.muted,
                 fontFamily = font, fontSize = 7.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
             WindowControl("_", "Minimize window", AshPalette.bone) { state.isMinimized = true }

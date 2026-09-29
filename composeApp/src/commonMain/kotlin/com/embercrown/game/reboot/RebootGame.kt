@@ -42,15 +42,21 @@ data class RebootBuilding(
 object RebootBuildings {
     val all = listOf(
         RebootBuilding("coalpit", 15.0, 1.18, 0.20, 0.0),
+        RebootBuilding("emberorchard", 55.0, 1.18, 0.52, 30.0),
         RebootBuilding("hollowmill", 130.0, 1.19, 1.20, 70.0),
+        RebootBuilding("lanternwatch", 400.0, 1.19, 3.4, 230.0),
         RebootBuilding("belltower", 1_100.0, 1.20, 8.0, 650.0),
+        RebootBuilding("ashmarket", 3_800.0, 1.20, 24.0, 2_300.0),
         RebootBuilding("moonforge", 9_500.0, 1.21, 60.0, 6_000.0),
+        RebootBuilding("scoutlodge", 34_000.0, 1.21, 185.0, 20_000.0),
         RebootBuilding("bonelibrary", 80_000.0, 1.22, 460.0, 50_000.0),
         RebootBuilding("citadel", 700_000.0, 1.23, 3_500.0, 450_000.0),
+        RebootBuilding("shadowfoundry", 2_800_000.0, 1.23, 11_000.0, 1_600_000.0),
         RebootBuilding("emberwell", 6_500_000.0, 1.24, 26_000.0, 4_000_000.0),
         RebootBuilding("gravegarden", 60_000_000.0, 1.25, 210_000.0, 40_000_000.0),
         RebootBuilding("soulharbor", 650_000_000.0, 1.26, 1_700_000.0, 400_000_000.0),
         RebootBuilding("stormspire", 7_000_000_000.0, 1.27, 14_000_000.0, 4_000_000_000.0),
+        RebootBuilding("courtobservatory", 29_000_000_000.0, 1.27, 47_000_000.0, 16_000_000_000.0),
         RebootBuilding("wyrmroost", 90_000_000_000.0, 1.28, 120_000_000.0, 50_000_000_000.0),
         RebootBuilding("eclipsethrone", 600_000_000_000.0, 1.29, 1_100_000_000.0, 400_000_000_000.0),
     )
@@ -106,6 +112,9 @@ data class RebootState(
     /** Unspent permanent relics. */
     val relics: Int = 0,
     val relicUpgrades: Map<String, Int> = emptyMap(),
+    /** Saved between sessions so the post-ritual choice cannot be skipped by restarting. */
+    val prestigePending: Boolean = false,
+    val prestigeEarned: Int = 0,
     val reign: Int = 1,
     val beaconSeconds: Int = 0,
     val beaconCooldownSeconds: Int = 0,
@@ -138,7 +147,18 @@ data class RebootState(
     val expeditionsCompleted: Int = 0,
     val lastExpeditionRegion: String? = null,
     val lastExpeditionReward: Int = 0,
+    val pendingMarchEventId: String? = null,
+    val resolvedMarchEvents: Set<String> = emptySet(),
+    val runMarchEvents: Int = 0,
     val specializations: Map<String, String> = emptyMap(),
+    val patrol: CrownPatrol? = null,
+    val patrolsCompleted: Int = 0,
+    val runPatrols: Int = 0,
+    val lastPatrolReward: Int = 0,
+    val courtVictories: Set<String> = emptySet(),
+    val courtTactic: String = "ward",
+    val blueprintLevels: Map<String, Int> = emptyMap(),
+    val guideSeen: Set<String> = emptySet(),
     val relicSetId: String = "none",
     val relicSetCooldownSeconds: Int = 0,
     /** Existing saves default to completed; only a genuinely new save starts at the welcome screen. */
@@ -150,6 +170,7 @@ data class RebootState(
     @Transient val offlineEmbers: Double = 0.0,
     @Transient val offlineSeconds: Long = 0L,
     @Transient val offlineGloom: Double = 0.0,
+    @Transient val offlinePatrols: Int = 0,
 ) {
     fun level(id: String): Int = levels[id] ?: 0
     fun mastery(id: String): Int = buildingUpgrades[id] ?: 0
@@ -159,7 +180,8 @@ data class RebootState(
 fun buildingCost(building: RebootBuilding, level: Int, state: RebootState): Double =
     floor(building.baseCost * building.growth.pow(level.coerceAtLeast(0)) *
         (1.0 - state.relicRank("foundation") * 0.04) *
-        (if (state.activeTrialId == "cinders") 1.25 else 1.0))
+        (if ("architect" in state.completedTrials) 0.95 else 1.0) *
+        (when (state.activeTrialId) { "cinders" -> 1.25; "architect" -> 1.15; else -> 1.0 }))
 
 fun buildingBundleCost(building: RebootBuilding, state: RebootState, count: Int): Double {
     if (count <= 0) return 0.0
@@ -204,7 +226,7 @@ fun rawProduction(state: RebootState): Double = RebootBuildings.all.sumOf { buil
 
 fun production(state: RebootState): Double = rawProduction(state) *
     (1.0 + state.relicRank("cinderheart") * 0.18) *
-    1.15.pow(state.claimedMilestones.size) *
+    (if (state.reign == 1) 1.30 else 1.15).pow(state.claimedMilestones.size) *
     (if (state.beaconSeconds > 0) 1.25 + state.relicRank("beaconkeeper") * 0.10 else 1.0) *
     (if (state.omenEffectSeconds > 0) when (state.omenEffectId) {
         "ward" -> 1.35
@@ -223,6 +245,7 @@ fun production(state: RebootState): Double = rawProduction(state) *
     outpostMultiplier(state) *
     (if (hasArtifact(state, "cinder_crown")) 1.18 else 1.0) *
     (if (state.eclipseSiegeStage == 3) 1.20 else 1.0) *
+    (1.0 + state.courtVictories.size * 0.05) *
     (if ("night" in state.completedTrials) 1.10 else 1.0) *
     (1.0 - state.gloom.coerceIn(0.0, 100.0) * 0.0035)
 
@@ -231,10 +254,30 @@ fun tapYield(state: RebootState): Double = (1.0 + rawProduction(state) * 0.12) *
     (if (state.omenEffectId == "frenzy" && state.omenEffectSeconds > 0) 5.0 else 1.0) *
     (if (state.edictId == "rally") 2.5 else 1.0)
 
-fun beaconCost(state: RebootState): Double = maxOf(20.0, floor(rawProduction(state) * 20.0))
+fun beaconCost(state: RebootState): Double = maxOf(20.0, floor(rawProduction(state) * 20.0 *
+    (if (state.specializations["emberorchard"] == "utility") 0.85 else 1.0)))
 
-fun relicPowerCost(power: RelicPower, state: RebootState): Int =
-    power.baseCost * (state.relicRank(power.id) + 1)
+fun relicPowerCost(power: RelicPower, state: RebootState): Int {
+    val next = state.relicRank(power.id) + 1
+    return power.baseCost * next * (next + 1) / 2
+}
+
+/** One fully mastered power is possible at the first Prestige; more need another reign. */
+fun relicPowerRankLimit(power: RelicPower, state: RebootState): Int =
+    if (state.reign < 3 && RelicPowers.all.any {
+            it.id != power.id && state.relicRank(it.id) >= it.maxRank
+        }) minOf(4, power.maxRank) else power.maxRank
+
+fun purchaseRelicPower(state: RebootState, power: RelicPower): RebootState {
+    val cost = relicPowerCost(power, state)
+    if (!state.prestigePending || state.relicRank(power.id) >= relicPowerRankLimit(power, state) ||
+        state.relics < cost) return state
+    return state.copy(relics = state.relics - cost,
+        relicUpgrades = state.relicUpgrades + (power.id to (state.relicRank(power.id) + 1)))
+}
+
+fun finishPrestige(state: RebootState): RebootState =
+    if (state.prestigePending) state.copy(prestigePending = false) else state
 
 fun nextMilestone(state: RebootState): RebootMilestone? =
     RebootMilestones.all.firstOrNull { it.id !in state.claimedMilestones }
@@ -247,8 +290,8 @@ fun ritualReward(state: RebootState): Int =
         (if (state.activeTrialId != null) 3 else 0)
 
 fun canRitual(state: RebootState): Boolean =
-    "crown" in state.claimedMilestones && state.level("eclipsethrone") > 0 &&
-        state.gloom >= 65.0 && trialGoalMet(state)
+    !state.prestigePending && "crown" in state.claimedMilestones && state.level("eclipsethrone") > 0 &&
+        trialGoalMet(state)
 
 /** Tutorial rewards and stage changes live in the state transition, never in composition. */
 fun withTutorialProgress(state: RebootState): RebootState {
@@ -273,6 +316,8 @@ fun performAshRitual(state: RebootState, now: Long = nowEpochSeconds()): RebootS
     return withChronicle(RebootState(
         relics = state.relics + ritualReward(state),
         relicUpgrades = state.relicUpgrades,
+        prestigePending = true,
+        prestigeEarned = ritualReward(state),
         chronicleEntries = state.chronicleEntries,
         cosmeticStyles = state.cosmeticStyles,
         featuredTrophies = state.featuredTrophies,
@@ -282,6 +327,10 @@ fun performAshRitual(state: RebootState, now: Long = nowEpochSeconds()): RebootS
         omenSequence = state.omenSequence,
         expeditionsCompleted = state.expeditionsCompleted,
         outpostLevels = state.outpostLevels,
+        patrolsCompleted = state.patrolsCompleted,
+        courtVictories = state.courtVictories,
+        blueprintLevels = state.blueprintLevels,
+        guideSeen = state.guideSeen,
         craftedArtifacts = state.craftedArtifacts,
         equippedArtifacts = state.equippedArtifacts,
         completedTrials = state.completedTrials + listOfNotNull(state.activeTrialId),
@@ -294,7 +343,7 @@ fun performAshRitual(state: RebootState, now: Long = nowEpochSeconds()): RebootS
 
 /** Shared clock for live and offline play. Only foreground time advances decisions and playtime. */
 fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = nowEpochSeconds()): RebootState {
-    if (s.tutorialStep == 0) return s.copy(lastPlayedEpochSeconds = now)
+    if (s.tutorialStep == 0 || s.prestigePending) return s.copy(lastPlayedEpochSeconds = now)
     var current = s
     var remaining = seconds
     // Integrate offline progress in small steps so gloom and short beacon bursts are respected.
@@ -310,6 +359,8 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
         val expeditionBefore = current.expedition
         val expeditionAfter = expeditionBefore?.copy(
             remainingSeconds = (expeditionBefore.remainingSeconds - step.toInt()).coerceAtLeast(0))
+        val patrolAfter = current.patrol?.copy(
+            remainingSeconds = (current.patrol.remainingSeconds - step.toInt()).coerceAtLeast(0))
         val nextCountdown = if (active && current.pendingOmenId == null && current.lifetimeEmbers >= 150_000.0)
             (current.omenCountdownSeconds - step.toInt()).coerceAtLeast(0) else current.omenCountdownSeconds
         current = current.copy(
@@ -320,9 +371,11 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
                 (0.11 + raw / (raw + 200.0) * 0.08) *
                 (1.0 - current.relicRank("nightward") * 0.12) *
                 (if (current.specializations["coalpit"] == "utility") 0.9 else 1.0) *
+                (if (current.specializations["lanternwatch"] == "utility") 0.9 else 1.0) *
                 (if (current.relicSetId == "nightveil") 0.8 else 1.0) *
                 (if (hasArtifact(current, "marsh_lantern")) 0.75 else 1.0) *
                 (if (current.activeTrialId == "night") 1.50 else 1.0) *
+                (if (current.activeTrialId == "watchfires") 1.25 else 1.0) *
                 (if (current.omenEffectId == "ward" && current.omenEffectSeconds > 0) 0.65 else 1.0) *
                 (when (current.edictId) { "harvest" -> 1.35; "ward" -> 0.55; else -> 1.0 })).coerceAtMost(100.0),
             beaconSeconds = (current.beaconSeconds - step.toInt()).coerceAtLeast(0),
@@ -331,6 +384,7 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
             edictCooldownSeconds = (current.edictCooldownSeconds - step.toInt()).coerceAtLeast(0),
             relicSetCooldownSeconds = (current.relicSetCooldownSeconds - step.toInt()).coerceAtLeast(0),
             expedition = expeditionAfter,
+            patrol = patrolAfter,
             omenCountdownSeconds = nextCountdown,
             pendingOmenId = if (nextCountdown == 0 && active) AshOmens.next(current.omenSequence).id else current.pendingOmenId,
             runSeconds = current.runSeconds + if (active) step else 0.0,
@@ -338,6 +392,9 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
         )
         if (expeditionAfter != null && expeditionAfter.remainingSeconds == 0) {
             current = finishExpedition(current)
+        }
+        if (patrolAfter != null && patrolAfter.remainingSeconds == 0) {
+            current = finishPatrol(current)
         }
         remaining -= step
     }
@@ -490,11 +547,12 @@ class RebootEngine {
 
     fun buyRelicPower(id: String) {
         val power = RelicPowers.all.firstOrNull { it.id == id } ?: return
-        mutate(SfxId.ASH_RELIC) { s ->
-            val cost = relicPowerCost(power, s)
-            if (s.relicRank(id) >= power.maxRank || s.relics < cost) return@mutate s
-            s.copy(relics = s.relics - cost, relicUpgrades = s.relicUpgrades + (id to (s.relicRank(id) + 1)))
-        }
+        mutate(SfxId.ASH_RELIC) { purchaseRelicPower(it, power) }
+        save()
+    }
+
+    fun beginNextReign() {
+        mutate(SfxId.ASH_PAGE) { finishPrestige(it) }
         save()
     }
 
@@ -516,6 +574,41 @@ class RebootEngine {
 
     fun siege(regionId: String) {
         mutate(SfxId.ASH_MARCH) { conquerRegion(it, regionId) }
+        save()
+    }
+
+    fun chooseMarchEvent(option: Int) {
+        mutate(SfxId.ASH_OMEN) { resolveMarchEvent(it, option) }
+        save()
+    }
+
+    fun startPatrol(route: String) {
+        mutate(SfxId.ASH_MARCH) { beginPatrol(it, route) }
+        save()
+    }
+
+    fun setCourtTactic(id: String) {
+        mutate(SfxId.ASH_PAGE) { if (id in CourtTactics.all) it.copy(courtTactic = id) else it }
+        save()
+    }
+
+    fun challengeCourt(id: String) {
+        mutate(SfxId.ASH_MARCH) { defeatCourtLord(it, id) }
+        save()
+    }
+
+    fun saveBlueprint() {
+        mutate(SfxId.ASH_PAGE) { it.copy(blueprintLevels = it.levels.filterValues { level -> level > 0 }) }
+        save()
+    }
+
+    fun buildBlueprint() {
+        mutate(SfxId.ASH_BUILD) { buildFromBlueprint(it) }
+        save()
+    }
+
+    fun acknowledgeGuide(id: String) {
+        mutate(SfxId.ASH_PAGE) { it.copy(guideSeen = it.guideSeen + id) }
         save()
     }
 
@@ -555,6 +648,7 @@ class RebootEngine {
         val saved = raw?.let { runCatching { json.decodeFromString<RebootState>(it) }.getOrNull() }
             ?: RebootState(tutorialStep = 0, tutorialAcknowledged = false)
         if (saved.tutorialStep == 0) return saved.copy(lastPlayedEpochSeconds = nowEpochSeconds())
+        if (saved.prestigePending) return saved.copy(lastPlayedEpochSeconds = nowEpochSeconds())
         val elapsed = (nowEpochSeconds() - saved.lastPlayedEpochSeconds).coerceIn(0L, OFFLINE_CAP_SECONDS)
         if (saved.lastPlayedEpochSeconds <= 0 || elapsed <= 0) return withChronicle(saved)
         val resumed = advanceReboot(saved, elapsed.toDouble(), active = false)
@@ -562,6 +656,7 @@ class RebootEngine {
             offlineEmbers = resumed.embers - saved.embers,
             offlineSeconds = elapsed,
             offlineGloom = resumed.gloom - saved.gloom,
+            offlinePatrols = resumed.patrolsCompleted - saved.patrolsCompleted,
         ) else resumed
     }
 
@@ -593,7 +688,8 @@ class RebootEngine {
     }
 
     fun dismissOfflineReport() {
-        _state.update { it.copy(offlineEmbers = 0.0, offlineSeconds = 0L, offlineGloom = 0.0) }
+        _state.update { it.copy(offlineEmbers = 0.0, offlineSeconds = 0L,
+            offlineGloom = 0.0, offlinePatrols = 0) }
     }
 }
 

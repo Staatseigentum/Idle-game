@@ -8,9 +8,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,15 +24,20 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.embercrown.game.resources.Res
+import com.embercrown.game.resources.reboot_ritual_breaks
+import com.embercrown.game.resources.reboot_ritual_ashes
 import com.embercrown.game.resources.reboot_ritual_fallen
+import com.embercrown.game.resources.reboot_ritual_reborn
 import com.embercrown.game.resources.reboot_ritual_reward
 import com.embercrown.game.ui.pixelFontFamily
+import com.embercrown.game.ui.pixelart.PixelArtImage
+import com.embercrown.game.ui.pixelart.PixelFit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.coroutineScope
 import org.jetbrains.compose.resources.stringResource
 
 /** Twelve square sparks burst from the exact point touched, then arc upwards and vanish. */
@@ -65,65 +73,74 @@ fun TapSparks(sequence: Int, position: Offset, modifier: Modifier = Modifier) {
     }
 }
 
-/** The realm burns away before the fresh reign is revealed. The save changes at the dark midpoint. */
+/** A seven-second pixel-art short: the actual kingdom burns, its crown breaks, and the next reign is rebuilt. */
 @Composable
-fun RitualTransition(reward: Int, onMidpoint: () -> Unit, onFinished: () -> Unit) {
+fun RitualTransition(before: RebootState, reward: Int, onBurn: () -> Unit, onMidpoint: () -> Unit,
+                     onRebirth: () -> Unit, onFinished: () -> Unit) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        coroutineScope {
+        progress.snapTo(0f)
+        kotlinx.coroutines.coroutineScope {
             launch {
-                delay(1_080)
+                delay(1_450)
+                onBurn()
+                delay(1_650)
                 onMidpoint()
+                delay(1_820)
+                onRebirth()
             }
-            progress.animateTo(1f, tween(2_400, easing = LinearEasing))
+            progress.animateTo(7.5f, tween(7_500, easing = LinearEasing))
         }
         onFinished()
     }
-    val p = progress.value
-    val veil = when {
-        p < 0.45f -> (p / 0.45f * 0.96f)
-        p < 0.66f -> 0.96f
-        else -> ((1f - p) / 0.34f * 0.96f).coerceIn(0f, 0.96f)
+    val seconds = progress.value
+    val frame = (seconds * 18f).toInt()
+    val overlay = remember(frame) { ritualCinematicArt(frame / 18f, frame) }
+    val oldScene = remember(before) {
+        ashKingdomArt(before.levels, before.gloom.toInt(), before.beaconSeconds > 0,
+            before.buildingUpgrades, before.conqueredRegions, before.specializations,
+            before.districtLevels, before.eclipseSiegeStage == 3,
+            before.cosmeticStyles["flame"] ?: "ember", before.cosmeticStyles["banner"] ?: "ash",
+            before.cosmeticStyles["sky"] ?: "blood")
     }
-    Box(
-        modifier = Modifier.fillMaxSize().background(AshPalette.void.copy(alpha = veil)).clickable { },
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val block = 12.dp.toPx()
-            repeat(170) { index ->
-                val x = ((index * 83 + index * index * 17) % size.width.toInt().coerceAtLeast(1)).toFloat()
-                val startY = size.height + (index * 41 % 220)
-                val speed = 0.45f + index % 7 * 0.12f
-                val y = startY - p * size.height * 2.2f * speed
-                if (y in -block..size.height) {
-                    val opacity = ((1f - p) * 0.9f).coerceIn(0f, 1f)
-                    val color = when (index % 4) {
-                        0 -> AshPalette.flameLight
-                        1 -> AshPalette.crimson
-                        else -> AshPalette.flame
-                    }
-                    drawRect(color.copy(alpha = opacity), Offset(x, y), Size(block, block * (1 + index % 3)))
-                }
+    val newScene = remember { ashKingdomArt(emptyMap(), 8, false, skyLook = "dawn") }
+    val viewportAlpha = ((seconds - 7.05f) / 0.45f).coerceIn(0f, 1f)
+    BoxWithConstraints(Modifier.fillMaxSize().background(AshPalette.void).clickable { }) {
+        val sceneWidth = minOf(maxWidth, maxHeight * 1.33f)
+        val sceneHeight = sceneWidth * 0.75f
+        val shake = if (seconds in 2.6f..3.55f) (1f - kotlin.math.abs(seconds - 3.1f) / 0.5f).coerceIn(0f, 1f) else 0f
+        Box(
+            Modifier.width(sceneWidth).height(sceneHeight).align(Alignment.Center)
+                .graphicsLayer {
+                    translationX = if (frame % 2 == 0) shake * 8.dp.toPx() else -shake * 8.dp.toPx()
+                    translationY = if (frame % 3 == 0) shake * 5.dp.toPx() else -shake * 3.dp.toPx()
+                },
+        ) {
+            if (seconds < 3.55f) PixelArtImage(oldScene, Modifier.fillMaxSize(), PixelFit.Contain)
+            if (seconds >= 4.25f) PixelArtImage(newScene,
+                Modifier.fillMaxSize().alpha(((seconds - 4.25f) / 1.35f).coerceIn(0f, 1f)), PixelFit.Contain)
+            PixelArtImage(overlay, Modifier.fillMaxSize(), PixelFit.Contain)
+            // A brief white-hot impact separates the dying realm from the ash-black pause.
+            val flash = if (seconds in 3.08f..3.34f) (1f - (seconds - 3.08f) / 0.26f) else 0f
+            if (flash > 0f) Box(Modifier.fillMaxSize().background(AshPalette.flameLight.copy(alpha = flash * 0.94f)))
+            if (seconds in 3.55f..4.35f) {
+                val darkness = (1f - kotlin.math.abs(seconds - 3.95f) / 0.4f).coerceIn(0f, 1f)
+                Box(Modifier.fillMaxSize().background(AshPalette.void.copy(alpha = darkness * 0.87f)))
             }
         }
-        if (p in 0.25f..0.88f) {
-            Column(
-                modifier = Modifier.background(AshPalette.void.copy(alpha = 0.88f))
-                    .padding(horizontal = 20.dp, vertical = 18.dp)
-                    .alpha((minOf((p - 0.25f) * 6f, (0.88f - p) * 7f)).coerceIn(0f, 1f)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    stringResource(Res.string.reboot_ritual_fallen), color = AshPalette.bone,
-                    fontFamily = pixelFontFamily(), fontSize = 11.sp,
-                )
-                Text(
-                    stringResource(Res.string.reboot_ritual_reward, reward), color = AshPalette.flameLight,
-                    fontFamily = pixelFontFamily(), fontSize = 9.sp,
-                    modifier = Modifier.padding(top = 14.dp),
-                )
-            }
+        val heading = when {
+            seconds < 1.6f -> Res.string.reboot_ritual_fallen
+            seconds < 3.4f -> Res.string.reboot_ritual_breaks
+            seconds < 4.65f -> Res.string.reboot_ritual_ashes
+            else -> Res.string.reboot_ritual_reborn
         }
+        Text(stringResource(heading), Modifier.align(Alignment.TopCenter).padding(top = 24.dp),
+            color = if (seconds >= 4.4f) AshPalette.flameLight else AshPalette.bone,
+            fontFamily = pixelFontFamily(), fontSize = 12.sp)
+        if (seconds >= 4.8f) Text(stringResource(Res.string.reboot_ritual_reward, reward),
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 29.dp)
+                .alpha(((seconds - 4.8f) / 0.55f).coerceIn(0f, 1f)),
+            color = AshPalette.flameLight, fontFamily = pixelFontFamily(), fontSize = 10.sp)
+        if (viewportAlpha > 0f) Box(Modifier.fillMaxSize().background(AshPalette.void.copy(alpha = viewportAlpha)))
     }
 }

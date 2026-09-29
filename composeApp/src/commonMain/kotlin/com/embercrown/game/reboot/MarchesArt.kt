@@ -32,6 +32,9 @@ fun lostMarchesArt(conquered: Set<String>, outposts: Map<String, Int> = emptyMap
     g.line(80, 57, 100, 83, 'r', 3)
     g.line(80, 57, 50, 35, 'r', 3)
     g.line(80, 57, 119, 38, 'r', 3)
+    g.line(80, 57, 68, 64, 'r', 2)
+    g.line(80, 57, 82, 27, 'r', 2)
+    g.line(119, 38, 131, 62, 'r', 2)
     // Irregular woods, marsh pools, coast and mountain shards establish four distinct silhouettes.
     for (i in 0..13) {
         val x = 15 + i * 4
@@ -52,6 +55,15 @@ fun lostMarchesArt(conquered: Set<String>, outposts: Map<String, Int> = emptyMap
         g.triangle(x - 7, 53, x + 7, 53, x, 22 - i % 3 * 4, 'b')
         g.triangle(x - 5, 52, x + 5, 52, x, 27 - i % 3 * 4, 'r')
     }
+    // New frontiers carry recognizable silhouettes beneath their markers.
+    for (i in 0..7) {
+        val x = 55 + i * 4
+        g.line(x, 65 + i % 3, x + 2, 58 + i % 4, 'T')
+    }
+    g.rect(77, 17, 88, 26, 'o'); g.rect(79, 19, 86, 25, 'R')
+    g.triangle(74, 18, 91, 18, 82, 10, 'b')
+    g.rect(125, 55, 139, 69, 'o'); g.rect(127, 57, 137, 67, 'r')
+    g.triangle(123, 56, 141, 56, 132, 46, 'b')
     g.rect(76, 53, 84, 65, 'o')
     g.rect(78, 54, 82, 63, 'f')
     g.triangle(74, 54, 86, 54, 80, 45, 'r')
@@ -82,9 +94,16 @@ fun lostMarchesArt(conquered: Set<String>, outposts: Map<String, Int> = emptyMap
             g.set(x + 4, y + 4, 'o')
         }
     }
-    val accent = if (frameLook == "gilded") Color(0xFFFFD784) else Color(0xFF78BDB4)
-    return g.build(mapPalette + mapOf('j' to (if (frameLook == "gilded") Color(0xFF8D6647)
-        else Color(0xFF426B70)), 'J' to accent))
+    val accent = when (frameLook) {
+        "gilded" -> Color(0xFFFFD784)
+        "glass" -> Color(0xFFB9E6EB)
+        else -> Color(0xFF78BDB4)
+    }
+    return g.build(mapPalette + mapOf('j' to (when (frameLook) {
+        "gilded" -> Color(0xFF8D6647)
+        "glass" -> Color(0xFF547A87)
+        else -> Color(0xFF426B70)
+    }), 'J' to accent))
 }
 
 fun lostMarchesMotionArt(frame: Int, expedition: MarchExpedition?): PixelArt {

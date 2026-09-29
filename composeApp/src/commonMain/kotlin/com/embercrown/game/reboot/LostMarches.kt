@@ -17,11 +17,15 @@ data class LostRegion(
 )
 
 object LostMarches {
+    val originalIds = setOf("forest", "fen", "coast", "ruins")
     val all = listOf(
         LostRegion("forest", 150_000.0, 25_000.0, 90, 350_000.0, "belltower", 3, 37, 72),
+        LostRegion("glassfields", 3_000_000.0, 500_000.0, 110, 9_000_000.0, "scoutlodge", 3, 68, 64),
         LostRegion("fen", 12_000_000.0, 2_000_000.0, 150, 30_000_000.0, "moonforge", 3, 100, 83),
         LostRegion("coast", 1_000_000_000.0, 160_000_000.0, 210, 2_500_000_000.0, "soulharbor", 1, 50, 35),
+        LostRegion("blackpass", 5_000_000_000.0, 800_000_000.0, 230, 15_000_000_000.0, "shadowfoundry", 2, 82, 27),
         LostRegion("ruins", 90_000_000_000.0, 14_000_000_000.0, 270, 200_000_000_000.0, "citadel", 5, 119, 38),
+        LostRegion("court", 400_000_000_000.0, 60_000_000_000.0, 300, 800_000_000_000.0, "courtobservatory", 1, 131, 62),
     )
 
     fun byId(id: String): LostRegion? = all.firstOrNull { it.id == id }
@@ -51,6 +55,7 @@ fun expeditionDuration(region: LostRegion, state: RebootState, roleId: String): 
 fun beginExpedition(state: RebootState, regionId: String, roleId: String, daring: Boolean): RebootState {
     val region = LostMarches.byId(regionId) ?: return state
     if (roleId !in setOf("scout", "warden", "occultist") || state.expedition != null ||
+        state.pendingMarchEventId != null ||
         state.lifetimeEmbers < region.unlockAt || state.embers < region.expeditionCost) return state
     return state.copy(
         embers = state.embers - region.expeditionCost,
@@ -85,7 +90,33 @@ fun finishExpedition(state: RebootState): RebootState {
         runExpeditions = state.runExpeditions + 1,
         lastExpeditionRegion = expedition.regionId,
         lastExpeditionReward = found,
+        pendingMarchEventId = if (expedition.regionId in setOf("glassfields", "blackpass", "court") &&
+            expedition.regionId !in state.resolvedMarchEvents) expedition.regionId else state.pendingMarchEventId,
     ))
+}
+
+fun marchEventFragmentReward(regionId: String): Int = when (regionId) {
+    "glassfields" -> 3
+    "blackpass" -> 4
+    else -> 5
+}
+
+fun marchEventGloomReward(regionId: String): Int = when (regionId) {
+    "glassfields" -> 18
+    "blackpass" -> 24
+    else -> 30
+}
+
+fun resolveMarchEvent(state: RebootState, option: Int): RebootState {
+    val regionId = state.pendingMarchEventId ?: return state
+    if (regionId !in setOf("glassfields", "blackpass", "court") || option !in 0..1) return state
+    val base = state.copy(pendingMarchEventId = null,
+        resolvedMarchEvents = state.resolvedMarchEvents + regionId,
+        runMarchEvents = state.runMarchEvents + 1)
+    return withChronicle(if (option == 0) base.copy(fragments = base.fragments +
+        (regionId to ((base.fragments[regionId] ?: 0) + marchEventFragmentReward(regionId))))
+    else base.copy(gloom = (base.gloom - marchEventGloomReward(regionId)).coerceAtLeast(0.0),
+        beaconSeconds = maxOf(base.beaconSeconds, 45 + base.runMarchEvents * 5)))
 }
 
 fun siegeFragmentCost(state: RebootState): Int =
@@ -112,6 +143,9 @@ fun conquerRegion(state: RebootState, id: String): RebootState {
 val marchSpecializations = mapOf(
     "coalpit" to "forest", "moonforge" to "fen",
     "bonelibrary" to "coast", "citadel" to "ruins",
+    "emberorchard" to "forest", "lanternwatch" to "forest",
+    "ashmarket" to "fen", "scoutlodge" to "glassfields",
+    "shadowfoundry" to "blackpass", "courtobservatory" to "court",
 )
 
 fun canSpecialize(state: RebootState, buildingId: String): Boolean {
@@ -130,6 +164,6 @@ fun specializeBuilding(state: RebootState, buildingId: String, path: String): Re
 }
 
 fun equipRelicSet(state: RebootState, id: String): RebootState =
-    if (state.reign < 2 || state.relicSetCooldownSeconds > 0 ||
+    if (!state.prestigePending || state.reign < 2 ||
         id !in setOf("emberguard", "wayfarer", "nightveil") || state.relicSetId == id) state
-    else state.copy(relicSetId = id, relicSetCooldownSeconds = 120)
+    else state.copy(relicSetId = id, relicSetCooldownSeconds = 0)

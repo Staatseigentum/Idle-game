@@ -31,9 +31,21 @@ object AshAudioBank {
                 mix(note(110.0, 0.17, 0.23), crackle(0.17, 0.07)),
                 note(164.81, 0.18, 0.22), note(220.0, 0.22, 0.18),
             )),
+            SfxId.ASH_RITUAL_CHARGE to clip(mix(
+                sweep(55.0, 740.0, 1.05, 0.20), note(110.0, 1.05, 0.09),
+            )),
+            SfxId.ASH_RITUAL_FIRE to clip(mix(
+                sweep(110.0, 520.0, 1.18, 0.16),
+                mix(crackle(1.18, 0.13), note(55.0, 1.18, 0.12)),
+            )),
             SfxId.ASH_RITUAL to clip(mix(
-                sweep(92.5, 370.0, 1.15, 0.24),
-                mix(note(46.25, 1.15, 0.13), crackle(0.85, 0.07)),
+                sweep(680.0, 48.0, 1.28, 0.29),
+                mix(note(46.25, 1.28, 0.23), crackle(1.0, 0.16)),
+            )),
+            SfxId.ASH_RITUAL_REBIRTH to clip(concat(
+                mix(note(196.0, 0.25, 0.16), note(392.0, 0.25, 0.11)),
+                mix(note(261.63, 0.29, 0.18), note(523.25, 0.29, 0.12)),
+                mix(note(392.0, 0.52, 0.18), note(783.99, 0.52, 0.15)),
             )),
             SfxId.ASH_OMEN to clip(mix(
                 mix(note(185.0, 0.52, 0.16), note(261.63, 0.52, 0.13)),

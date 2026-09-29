@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class RebootGameTest {
     @Test
     fun buildingsAndSealsFormAnOrderedCampaign() {
-        assertEquals(12, RebootBuildings.all.size)
+        assertEquals(18, RebootBuildings.all.size)
         assertEquals(6, RebootMilestones.all.size)
         assertEquals(CROWN_TARGET, RebootMilestones.all.last().target)
         assertTrue(RebootBuildings.all.zipWithNext().all { (a, b) -> a.baseCost < b.baseCost && a.unlockAt < b.unlockAt })
@@ -48,7 +48,7 @@ class RebootGameTest {
             relics = 3,
             relicUpgrades = mapOf("cinderheart" to 2, "foundation" to 1),
         )
-        assertEquals(3, relicPowerCost(power, state))
+        assertEquals(6, relicPowerCost(power, state))
         assertTrue(production(state) > production(state.copy(relicUpgrades = emptyMap())))
         assertEquals(state, Json.decodeFromString<RebootState>(Json.encodeToString(state)))
     }
@@ -64,7 +64,57 @@ class RebootGameTest {
         )
         assertTrue(canRitual(final))
         assertEquals(28, ritualReward(final))
-        assertFalse(canRitual(final.copy(gloom = 64.9)))
+        assertTrue(canRitual(final.copy(gloom = 0.0)))
+    }
+
+    @Test
+    fun prestigeIsSavedPausesTimeAndOwnsAllRelicChoices() {
+        val ready = RebootState(
+            lifetimeEmbers = CROWN_TARGET,
+            levels = mapOf("eclipsethrone" to 1),
+            claimedMilestones = RebootMilestones.all.map { it.id }.toSet(),
+            relics = 15,
+        )
+        val first = performAshRitual(ready, now = 100L)
+        assertTrue(first.prestigePending)
+        assertEquals(2, first.reign)
+        assertEquals(28, first.prestigeEarned)
+        assertEquals(43, first.relics)
+        assertFalse(canRitual(first))
+        assertEquals(first, Json.decodeFromString<RebootState>(Json.encodeToString(first)))
+        assertEquals(first.copy(lastPlayedEpochSeconds = 500L),
+            advanceReboot(first, 400.0, active = false, now = 500L))
+
+        val power = RelicPowers.all.first()
+        assertEquals(first.copy(prestigePending = false),
+            purchaseRelicPower(first.copy(prestigePending = false), power))
+        val bought = purchaseRelicPower(first, power)
+        assertEquals(1, bought.relicRank(power.id))
+        assertEquals(first.relics - 1, bought.relics)
+        val set = equipRelicSet(bought, "emberguard")
+        assertEquals("emberguard", set.relicSetId)
+        val resumed = finishPrestige(set)
+        assertFalse(resumed.prestigePending)
+        assertEquals(resumed, purchaseRelicPower(resumed, power))
+        assertEquals(resumed, equipRelicSet(resumed, "wayfarer"))
+    }
+
+    @Test
+    fun firstPrestigeCanMaxOneButNeverTwoPowers() {
+        val powers = RelicPowers.all.take(2)
+        var first = RebootState(reign = 2, prestigePending = true, relics = 80)
+        powers.forEach { power ->
+            repeat(5) { first = purchaseRelicPower(first, power) }
+        }
+        assertEquals(5, first.relicRank(powers[0].id))
+        assertEquals(4, first.relicRank(powers[1].id))
+        assertEquals(4, relicPowerRankLimit(powers[1], first))
+        assertEquals(25, first.relics)
+        val next = first.copy(reign = 3)
+        assertEquals(5, relicPowerRankLimit(powers[1], next))
+        val upgraded = purchaseRelicPower(next, powers[1])
+        assertEquals(5, upgraded.relicRank(powers[1].id))
+        assertEquals(10, upgraded.relics)
     }
 
     @Test
@@ -152,13 +202,6 @@ class RebootGameTest {
                     relics = state.relics + seal.relicReward,
                 ))
                 seal = nextMilestone(state)
-            }
-            val power = RelicPowers.all.first()
-            while (state.relicRank(power.id) < power.maxRank && state.relics >= relicPowerCost(power, state)) {
-                state = state.copy(
-                    relics = state.relics - relicPowerCost(power, state),
-                    relicUpgrades = state.relicUpgrades + (power.id to (state.relicRank(power.id) + 1)),
-                )
             }
             if ("crown" in state.claimedMilestones) {
                 val throne = RebootBuildings.byId("eclipsethrone")

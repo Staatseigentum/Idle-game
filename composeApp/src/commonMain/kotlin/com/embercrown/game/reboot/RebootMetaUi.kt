@@ -163,6 +163,9 @@ internal fun OfflineReport(state: RebootState, onContinue: () -> Unit) {
             Body(stringResource(Res.string.reboot_offline_time, formatPlaytime(state.offlineSeconds.toDouble())), AshPalette.bone)
             Label(stringResource(Res.string.reboot_offline_earned, formatAmount(state.offlineEmbers)), AshPalette.teal, 10)
             Body(stringResource(Res.string.reboot_offline_gloom, state.offlineGloom.toInt()), AshPalette.ash)
+            if (state.offlinePatrols > 0) {
+                Body(stringResource(Res.string.patrol_offline, state.offlinePatrols), AshPalette.teal)
+            }
             if (state.offlineSeconds >= 8 * 60 * 60) {
                 Body(stringResource(Res.string.reboot_offline_cap), AshPalette.muted)
             }
@@ -385,15 +388,21 @@ private fun omenTitle(id: String): StringResource = when (id) {
 
 private fun buildingTitle(id: String): StringResource = when (id) {
     "coalpit" -> Res.string.reboot_coalpit
+    "emberorchard" -> Res.string.reboot_emberorchard
     "hollowmill" -> Res.string.reboot_hollowmill
+    "lanternwatch" -> Res.string.reboot_lanternwatch
     "belltower" -> Res.string.reboot_belltower
+    "ashmarket" -> Res.string.reboot_ashmarket
     "moonforge" -> Res.string.reboot_moonforge
+    "scoutlodge" -> Res.string.reboot_scoutlodge
     "bonelibrary" -> Res.string.reboot_bonelibrary
     "citadel" -> Res.string.reboot_citadel
+    "shadowfoundry" -> Res.string.reboot_shadowfoundry
     "emberwell" -> Res.string.reboot_emberwell
     "gravegarden" -> Res.string.reboot_gravegarden
     "soulharbor" -> Res.string.reboot_soulharbor
     "stormspire" -> Res.string.reboot_stormspire
+    "courtobservatory" -> Res.string.reboot_courtobservatory
     "wyrmroost" -> Res.string.reboot_wyrmroost
     else -> Res.string.reboot_eclipsethrone
 }
@@ -425,6 +434,13 @@ private fun chronicleText(id: String): Pair<StringResource, StringResource> = wh
     "trial_one" -> Res.string.exp_chron_trial to Res.string.exp_chron_trial_hint
     "trials_all" -> Res.string.exp_chron_trials_all to Res.string.exp_chron_trials_all_hint
     "eclipse_siege" -> Res.string.exp_chron_siege to Res.string.exp_chron_siege_hint
+    "patrol_one" -> Res.string.chron_patrol_one to Res.string.chron_patrol_one_hint
+    "patrol_ten" -> Res.string.chron_patrol_ten to Res.string.chron_patrol_ten_hint
+    "glassfields" -> Res.string.chron_glassfields to Res.string.chron_glassfields_hint
+    "march_choice" -> Res.string.chron_march_choice to Res.string.chron_march_choice_hint
+    "blackpass" -> Res.string.chron_blackpass to Res.string.chron_blackpass_hint
+    "black_court" -> Res.string.chron_black_court to Res.string.chron_black_court_hint
+    "sovereign" -> Res.string.chron_sovereign to Res.string.chron_sovereign_hint
     else -> Res.string.reboot_chron_ritual to Res.string.reboot_chron_ritual_hint
 }
 
@@ -461,6 +477,9 @@ private fun cosmeticLookTitle(id: String): StringResource = when (id) {
     "storm" -> Res.string.chron_look_storm
     "veil" -> Res.string.chron_look_veil
     "eclipse" -> Res.string.chron_look_eclipse
+    "court" -> Res.string.chron_look_court
+    "dawn" -> Res.string.chron_look_dawn
+    "glass" -> Res.string.chron_look_glass
     "iron" -> Res.string.chron_look_iron
     "warden" -> Res.string.chron_look_warden
     else -> Res.string.chron_look_gilded

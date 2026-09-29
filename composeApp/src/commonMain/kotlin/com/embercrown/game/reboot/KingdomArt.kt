@@ -70,6 +70,7 @@ private fun kingdomCosmeticColors(flame: String, banner: String, sky: String): M
         "march" -> Color(0xFF337F80) to Color(0xFF92DDCE)
         "royal" -> Color(0xFFB44A55) to Color(0xFFFFD784)
         "eclipse" -> Color(0xFF625188) to Color(0xFFE9D6A0)
+        "court" -> Color(0xFF3A3558) to Color(0xFFE7B96B)
         else -> Color(0xFF71434D) to Color(0xFFB98565)
     }
     val skyColors = when (sky) {
@@ -82,6 +83,9 @@ private fun kingdomCosmeticColors(flame: String, banner: String, sky: String): M
         "eclipse" -> mapOf('a' to Color(0xFF090B13), 'b' to Color(0xFF171827),
             'c' to Color(0xFF2E2532), 'd' to Color(0xFF3C2A31),
             'r' to Color(0xFF726047), 'R' to Color(0xFF17141C), 'Q' to Color(0xFFB68E56))
+        "dawn" -> mapOf('a' to Color(0xFF172739), 'b' to Color(0xFF375064),
+            'c' to Color(0xFF786B6C), 'd' to Color(0xFFAA7965),
+            'r' to Color(0xFFB98565), 'R' to Color(0xFFFFCB83), 'Q' to Color(0xFFFFE9B2))
         else -> emptyMap()
     }
     return worldColors + skyColors + mapOf('e' to fire.first, 'E' to fire.second, 'Y' to fire.third,
@@ -159,6 +163,11 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.rect(21, 95, 32, 99, 'e'); g.rect(24, 94, 29, 98, 'E')
         g.rect(34, 80, 38, 89, 'K')
     }
+    if ((levels["emberorchard"] ?: 0) > 0) {
+        g.rect(5, 82, 15, 101, 't')
+        g.circle(10, 77, 9, 'F'); g.circle(6, 78, 5, 'f')
+        g.set(7, 76, 'E'); g.set(13, 73, 'Y'); g.set(15, 79, 'E')
+    }
     if ((levels["hollowmill"] ?: 0) > 0) {
         g.rect(125, 76, 142, 99, 'o'); g.rect(127, 78, 140, 98, 'K')
         g.triangle(123, 78, 144, 78, 134, 66, 'w')
@@ -169,6 +178,15 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.triangle(38, 55, 55, 55, 47, 43, 'w')
         g.rect(45, 58, 49, 70, 'o')
         g.rect(44, 74, 50, 77, 'L')
+    }
+    if ((levels["lanternwatch"] ?: 0) > 0) {
+        g.rect(98, 73, 100, 98, 'B'); g.rect(95, 70, 103, 74, 'o')
+        g.rect(97, 68, 101, 72, 'E'); g.set(99, 67, 'Y')
+    }
+    if ((levels["ashmarket"] ?: 0) > 0) {
+        g.rect(111, 96, 130, 101, 't')
+        g.triangle(109, 96, 132, 96, 120, 87, 'R')
+        g.rect(116, 98, 120, 100, 'E'); g.rect(124, 98, 128, 100, 'B')
     }
     if ((levels["moonforge"] ?: 0) > 0) {
         g.rect(107, 83, 124, 98, 'o'); g.rect(109, 85, 122, 97, 'K')
@@ -181,6 +199,11 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.triangle(30, 73, 58, 73, 44, 64, 'p')
         for (x in 38..50 step 6) g.rect(x, 78, x + 2, 86, 'p')
     }
+    if ((levels["scoutlodge"] ?: 0) > 0) {
+        g.rect(38, 96, 52, 104, 't')
+        g.triangle(36, 96, 54, 96, 45, 86, 'W')
+        g.rect(44, 99, 47, 104, 'E'); g.rect(50, 87, 51, 96, 'B')
+    }
     if ((levels["citadel"] ?: 0) > 0) {
         for (x in listOf(57, 96)) {
             g.rect(x, 35, x + 9, 66, 'o'); g.rect(x + 2, 37, x + 7, 64, 'L')
@@ -189,6 +212,11 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         }
         g.rect(75, 44, 86, 57, 'o'); g.rect(77, 46, 84, 55, 'K')
         g.triangle(73, 45, 88, 45, 80, 33, 'W')
+    }
+    if ((levels["shadowfoundry"] ?: 0) > 0) {
+        g.rect(115, 77, 129, 93, 'o'); g.rect(117, 79, 127, 91, 'K')
+        g.triangle(113, 78, 131, 78, 122, 68, 'w')
+        g.rect(119, 85, 124, 91, 'R'); g.set(121, 84, 'P')
     }
     if ((levels["emberwell"] ?: 0) > 0) {
         g.circle(10, 98, 9, 'o'); g.circle(10, 98, 6, 'K')
@@ -212,6 +240,11 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.triangle(106, 50, 121, 50, 113, 31, 'w')
         g.rect(112, 23, 114, 33, 'B'); g.set(113, 22, 'P')
     }
+    if ((levels["courtobservatory"] ?: 0) > 0) {
+        g.rect(87, 42, 98, 57, 'o'); g.rect(89, 44, 96, 55, 'K')
+        g.circle(92, 39, 7, 'p'); g.circle(92, 39, 4, 'B')
+        g.set(92, 39, 'P')
+    }
     if ((levels["wyrmroost"] ?: 0) > 0) {
         g.rect(143, 68, 157, 84, 'o'); g.rect(145, 70, 155, 82, 'W')
         g.triangle(138, 69, 159, 69, 149, 55, 'w')
@@ -227,10 +260,13 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
     }
     // Mastery illuminates a structure's crest, so upgrades are visible in the kingdom too.
     val crests = mapOf(
-        "coalpit" to (27 to 80), "hollowmill" to (134 to 66), "belltower" to (47 to 43),
+        "coalpit" to (27 to 80), "emberorchard" to (10 to 70), "hollowmill" to (134 to 66),
+        "lanternwatch" to (99 to 67), "belltower" to (47 to 43), "ashmarket" to (120 to 86),
         "moonforge" to (115 to 72), "bonelibrary" to (44 to 64), "citadel" to (80 to 34),
+        "scoutlodge" to (45 to 85), "shadowfoundry" to (122 to 67),
         "emberwell" to (10 to 87), "gravegarden" to (150 to 82), "soulharbor" to (9 to 69),
-        "stormspire" to (113 to 21), "wyrmroost" to (149 to 54), "eclipsethrone" to (80 to 22),
+        "stormspire" to (113 to 21), "courtobservatory" to (92 to 32),
+        "wyrmroost" to (149 to 54), "eclipsethrone" to (80 to 22),
     )
     for ((id, crest) in crests) {
         val tier = masteries[id] ?: 0
@@ -246,8 +282,9 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         }
     }
     // Each liberated border raises an illuminated banner in the main kingdom skyline.
-    val borderBanners = mapOf("forest" to (23 to 76), "fen" to (139 to 78),
-        "coast" to (8 to 65), "ruins" to (94 to 52))
+    val borderBanners = mapOf("forest" to (23 to 76), "glassfields" to (33 to 74),
+        "fen" to (139 to 78), "coast" to (8 to 65), "blackpass" to (105 to 52),
+        "ruins" to (94 to 52), "court" to (126 to 51))
     borderBanners.forEach { (id, position) ->
         if (id in conquered) {
             val (x, y) = position
@@ -331,6 +368,10 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         val rise = (frame * 2 + puff * 7) % 25
         g.circle(36 + (puff + frame / 4) % 4 - 2, 78 - rise, 2 + rise / 10, 'z')
     }
+    if ((levels["emberorchard"] ?: 0) > 0) repeat(3) { firefly ->
+        val drift = (frame + firefly * 7) % 14
+        g.set(5 + (firefly * 5 + frame / 3) % 12, 72 - drift / 2, if (drift < 7) 'Y' else 'E')
+    }
     if ((levels["hollowmill"] ?: 0) > 0) {
         val directions = listOf(0 to -14, 10 to -10, 14 to 0, 10 to 10, 0 to 14, -10 to 10, -14 to 0, -10 to -10)
         val phase = frame / 2 % 8
@@ -345,15 +386,33 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         val swing = when (frame / 3 % 4) { 0 -> -2; 2 -> 2; else -> 0 }
         g.rect(46 + swing, 59, 48 + swing, 68, 'B')
     }
+    if ((levels["lanternwatch"] ?: 0) > 0) {
+        g.circle(99, 68, if (frame % 8 < 4) 3 else 2, 'E')
+        g.set(99, 67, 'Y')
+    }
+    if ((levels["ashmarket"] ?: 0) > 0) {
+        g.rect(113, 92, 118 + frame / 4 % 3, 94, 'R')
+        g.set(124 + frame % 4, 91 - frame % 3, 'Y')
+    }
     if ((levels["moonforge"] ?: 0) > 0) repeat(5) { spark ->
         val rise = (frame * 3 + spark * 5) % 20
         g.set(113 + (spark * 3 + frame) % 8, 87 - rise, if (spark % 2 == 0) 'Y' else 'E')
     }
     if ((levels["bonelibrary"] ?: 0) > 0) g.set(40 + frame / 5 % 3 * 6, 81, 'P')
+    if ((levels["scoutlodge"] ?: 0) > 0) {
+        val walker = 47 + frame / 2 % 30
+        g.rect(walker, 101, walker + 1, 104, 'B')
+        g.set(walker, 100, 'Y')
+        g.set(walker + if (frame % 2 == 0) -1 else 2, 105, 'o')
+    }
     if ((levels["citadel"] ?: 0) > 0) {
         val banner = if (frame / 3 % 2 == 0) 5 else 3
         g.rect(64, 38, 64 + banner, 40, 'R')
         g.rect(102, 38, 102 + banner, 40, 'R')
+    }
+    if ((levels["shadowfoundry"] ?: 0) > 0) repeat(4) { spark ->
+        val rise = (frame * 2 + spark * 7) % 17
+        g.set(119 + (spark * 3 + frame) % 7, 84 - rise, if (spark % 2 == 0) 'P' else 'E')
     }
     if ((levels["emberwell"] ?: 0) > 0) {
         g.circle(10, 98, if (frame % 8 < 4) 3 else 2, 'E')
@@ -371,6 +430,10 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         g.line(113, 22, 107 + frame % 4, 35, 'P')
         g.line(113, 22, 120 - frame % 3, 36, 'S')
     }
+    if ((levels["courtobservatory"] ?: 0) > 0) {
+        g.ring(92, 39, if (frame % 8 < 4) 6 else 5, 5, 'P')
+        g.set(92 + frame % 5 - 2, 39, 'Y')
+    }
     if ((levels["wyrmroost"] ?: 0) > 0) {
         val wing = if (frame / 3 % 2 == 0) 8 else 4
         g.line(149, 65, 139, 65 - wing, 'R', 2)
@@ -382,7 +445,10 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         g.circle(80, 22, 7, 'a')
         g.set(80, 22, 'Y')
     }
-    val specializedCrests = mapOf("coalpit" to (27 to 80), "moonforge" to (115 to 72),
+    val specializedCrests = mapOf("coalpit" to (27 to 80), "emberorchard" to (10 to 70),
+        "lanternwatch" to (99 to 67), "ashmarket" to (120 to 86),
+        "scoutlodge" to (45 to 85), "shadowfoundry" to (122 to 67),
+        "courtobservatory" to (92 to 32), "moonforge" to (115 to 72),
         "bonelibrary" to (44 to 64), "citadel" to (80 to 34))
     specializations.forEach { (id, path) ->
         specializedCrests[id]?.let { (x, y) ->
@@ -425,6 +491,11 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         val y = 74 + (i * 19 % 40)
         g.set(x, y, 'p')
     }
+    if (gloom >= 35) repeat(12) { i ->
+        val x = (i * 31 + frame * 3) % 160
+        val y = (i * 17 + frame * 2) % 90
+        g.line(x, y, x - 1, y + 3, 'v')
+    }
     // Mist crosses in front of the earth but leaves the buildings legible.
     repeat(7) { i ->
         val x = (i * 31 + frame * 2) % 185 - 25
@@ -452,6 +523,11 @@ fun ashBuildingIcon(id: String, frame: Int = 0): PixelArt {
             g.rect(15 + frame % 3 - 1, 17 - frame % 2, 17 + frame % 3 - 1, 23, 'Y')
             g.set(12 + frame % 5, 13 - frame % 4, 'z')
         }
+        "emberorchard" -> {
+            g.rect(14, 15, 18, 28, 't'); g.circle(16, 12, 10, 'F')
+            g.set(9, 11, 'E'); g.set(19, 8, 'Y'); g.set(22, 16, 'E')
+            g.set(11 + frame % 9, 5 + frame % 4, 'Y')
+        }
         "hollowmill" -> {
             g.rect(10, 10, 22, 27, 'K')
             g.triangle(8, 11, 24, 11, 16, 4, 'W')
@@ -462,6 +538,11 @@ fun ashBuildingIcon(id: String, frame: Int = 0): PixelArt {
             }
             g.circle(16, 16, 1, 'o')
         }
+        "lanternwatch" -> {
+            g.rect(14, 13, 18, 28, 'B'); g.rect(10, 9, 22, 12, 'o')
+            g.rect(13, 5, 19, 11, 'e'); g.circle(16, 8, if (frame % 4 < 2) 4 else 3, 'E')
+            g.set(16, 7, 'Y')
+        }
         "belltower" -> {
             g.rect(10, 9, 22, 28, 'K')
             g.triangle(8, 9, 24, 9, 16, 3, 'w')
@@ -469,12 +550,22 @@ fun ashBuildingIcon(id: String, frame: Int = 0): PixelArt {
             g.rect(14 + frame / 2 % 3 - 1, 15, 18 + frame / 2 % 3 - 1, 20, 'B')
             g.set(16, 22, 'E')
         }
+        "ashmarket" -> {
+            g.rect(4, 20, 28, 28, 't'); g.triangle(3, 20, 29, 20, 16, 7, 'R')
+            g.rect(9, 22, 14, 26, 'E'); g.rect(19, 22, 24, 26, 'B')
+            g.set(8 + frame % 16, 17, 'Y')
+        }
         "moonforge" -> {
             g.rect(6, 17, 26, 27, 'K')
             g.triangle(4, 17, 28, 17, 16, 7, 'W')
             g.rect(11, 21, 21, 28, 'e')
             g.rect(14 + frame % 3 - 1, 17 - frame % 2, 18, 24, 'Y')
             g.set(10 + frame % 11, 12 - frame % 6, 'E')
+        }
+        "scoutlodge" -> {
+            g.rect(6, 17, 26, 28, 't'); g.triangle(4, 17, 28, 17, 16, 5, 'W')
+            g.rect(14, 21, 18, 28, 'E'); g.rect(22, 5, 23, 17, 'B')
+            g.rect(24, 6, 27 + frame % 2, 10, 'R')
         }
         "bonelibrary" -> {
             g.rect(5, 12, 27, 27, 'B')
@@ -489,6 +580,11 @@ fun ashBuildingIcon(id: String, frame: Int = 0): PixelArt {
             g.triangle(20, 11, 28, 11, 24, 3, 'w')
             g.rect(14, 19, 18, 27, 'E')
             g.rect(21, 8, 21 + frame % 3, 9, 'R')
+        }
+        "shadowfoundry" -> {
+            g.rect(5, 16, 27, 28, 'K'); g.triangle(3, 16, 29, 16, 16, 6, 'w')
+            g.rect(12, 19, 21, 27, 'R'); g.set(16, 19 - frame % 5, 'P')
+            g.set(14 + frame % 7, 11 - frame % 4, 'E')
         }
         "emberwell" -> {
             g.circle(16, 19, 10, 'K'); g.circle(16, 19, 7, 'o')
@@ -510,6 +606,11 @@ fun ashBuildingIcon(id: String, frame: Int = 0): PixelArt {
             g.rect(11, 13, 21, 27, 'K'); g.triangle(9, 13, 23, 13, 16, 4, 'w')
             g.rect(15, 2, 17, 7, 'B')
             if (frame % 8 < 5) g.line(16, 3, 23, 18, 'P')
+        }
+        "courtobservatory" -> {
+            g.rect(9, 17, 23, 28, 'K'); g.circle(16, 12, 9, 'p')
+            g.circle(16, 12, 6, 'B'); g.circle(16, 12, 3, 'o')
+            g.set(16 + frame % 5 - 2, 12, 'P')
         }
         "wyrmroost" -> {
             g.triangle(5, 19, 27, 19, 16, 7, 'w'); g.rect(9, 19, 23, 27, 'W')

@@ -87,7 +87,9 @@ class LostMarchesTest {
         assertEquals(4, newReign.expeditionsCompleted)
         val equipped = equipRelicSet(newReign, "wayfarer")
         assertEquals("wayfarer", equipped.relicSetId)
-        assertEquals(equipped, equipRelicSet(equipped, "emberguard"))
+        assertEquals("emberguard", equipRelicSet(equipped, "emberguard").relicSetId)
+        val resumed = finishPrestige(equipped)
+        assertEquals(resumed, equipRelicSet(resumed, "emberguard"))
         assertEquals(equipped, Json.decodeFromString<RebootState>(Json.encodeToString(equipped)))
     }
 }

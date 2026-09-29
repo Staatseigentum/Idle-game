@@ -69,7 +69,7 @@ object CrownChronicle {
         ChronicleEntry("march_scout") { it.expeditionsCompleted >= 1 },
         ChronicleEntry("march_conquer") { it.conqueredRegions.isNotEmpty() },
         ChronicleEntry("march_specialist") { it.specializations.isNotEmpty() },
-        ChronicleEntry("march_all") { it.conqueredRegions.size == LostMarches.all.size },
+        ChronicleEntry("march_all") { LostMarches.originalIds.all { id -> id in it.conqueredRegions } },
         ChronicleEntry("orders_three") { it.claimedOrders.size >= 3 },
         ChronicleEntry("district_one") { it.districtLevels.values.sum() >= 1 },
         ChronicleEntry("district_all") { CrownDistricts.all.all { district ->
@@ -80,6 +80,13 @@ object CrownChronicle {
         ChronicleEntry("trial_one") { it.completedTrials.isNotEmpty() },
         ChronicleEntry("trials_all") { it.completedTrials.size == CrownTrials.all.size },
         ChronicleEntry("eclipse_siege") { it.eclipseSiegeStage >= 3 },
+        ChronicleEntry("patrol_one") { it.patrolsCompleted >= 1 },
+        ChronicleEntry("patrol_ten") { it.patrolsCompleted >= 10 },
+        ChronicleEntry("glassfields") { "glassfields" in it.conqueredRegions },
+        ChronicleEntry("march_choice") { it.runMarchEvents >= 1 },
+        ChronicleEntry("blackpass") { "blackpass" in it.conqueredRegions },
+        ChronicleEntry("black_court") { it.courtVictories.isNotEmpty() },
+        ChronicleEntry("sovereign") { "sovereign" in it.courtVictories },
     )
 }
 

@@ -11,7 +11,8 @@ class AshAudioBankTest {
     fun allAshActionsHaveAudibleClips() {
         val expected = listOf(
             SfxId.ASH_TAP, SfxId.ASH_BUILD, SfxId.ASH_MASTERY, SfxId.ASH_RELIC,
-            SfxId.ASH_BEACON, SfxId.ASH_MARCH, SfxId.ASH_RITUAL, SfxId.ASH_OMEN,
+            SfxId.ASH_BEACON, SfxId.ASH_MARCH, SfxId.ASH_RITUAL_CHARGE, SfxId.ASH_RITUAL_FIRE,
+            SfxId.ASH_RITUAL, SfxId.ASH_RITUAL_REBIRTH, SfxId.ASH_OMEN,
             SfxId.ASH_GUIDE, SfxId.ASH_PAGE,
         )
         assertEquals(expected.toSet(), AshAudioBank.effects.keys)

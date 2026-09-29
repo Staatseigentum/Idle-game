@@ -14,13 +14,16 @@ object ChronicleCosmetics {
         ChronicleLook("banner", "march", "march_conquer"),
         ChronicleLook("banner", "royal", "three_seals"),
         ChronicleLook("banner", "eclipse", "eclipse_siege"),
+        ChronicleLook("banner", "court", "black_court"),
         ChronicleLook("sky", "blood"),
         ChronicleLook("sky", "storm", "storm"),
         ChronicleLook("sky", "veil", "trial_one"),
         ChronicleLook("sky", "eclipse", "eclipse_siege"),
+        ChronicleLook("sky", "dawn", "sovereign"),
         ChronicleLook("map", "iron"),
         ChronicleLook("map", "warden", "march_conquer"),
         ChronicleLook("map", "gilded", "march_all"),
+        ChronicleLook("map", "glass", "glassfields"),
     )
     val categories = listOf("flame", "banner", "sky", "map")
 
