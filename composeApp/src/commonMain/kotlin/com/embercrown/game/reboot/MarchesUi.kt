@@ -104,9 +104,9 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
             }
         }
         item(key = "approach-desc") { Body(stringResource(if (daring) Res.string.march_daring_desc else Res.string.march_safe_desc)) }
-        items(LostMarches.all, key = { it.id }) { region -> MarchRegionCard(state, region, role, daring) }
-        item(key = "siege") { Rule(); EclipseSiegePanel(state) }
-        item(key = "court") { Rule(); BlackCourtPanel(state) }
+        items(LostMarches.all, key = { "region-${it.id}" }) { region -> MarchRegionCard(state, region, role, daring) }
+        item(key = "eclipse-siege-panel") { Rule(); EclipseSiegePanel(state) }
+        item(key = "black-court-panel") { Rule(); BlackCourtPanel(state) }
         item(key = "footer") { Spacer(Modifier.height(14.dp)) }
     }
 }
@@ -145,6 +145,12 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
         }
         Label(stringResource(Res.string.march_fragments, state.fragments[region.id] ?: 0), AshPalette.teal, 8)
         if (conquered) Label(stringResource(Res.string.march_reclaimed), AshPalette.teal, 8)
+        state.lastSiegeResult?.takeIf { it.regionId == region.id }?.let { result ->
+            Body(if (result.won) stringResource(Res.string.march_siege_victory)
+                else stringResource(Res.string.march_siege_defeat, formatAmount(result.embersLost),
+                    result.fragmentsLost, result.gloomGained),
+                if (result.won) AshPalette.teal else AshPalette.crimson)
+        }
         Body(stringResource(Res.string.march_duration, expeditionDuration(region, state, role)))
         AshButton(
             label = stringResource(Res.string.march_expedition, formatAmount(region.expeditionCost)),
@@ -158,12 +164,21 @@ private fun MarchRegionCard(state: RebootState, region: LostRegion, role: String
             Body(stringResource(Res.string.march_siege_need, siegeFragmentCost(state),
                 stringResource(marchBuildingTitle(region.defenderId)), region.defenderLevel))
             Body(stringResource(Res.string.march_siege_reward))
+            Label(stringResource(Res.string.march_siege_chance,
+                (siegeWinChance(state, region) * 100).toInt()), AshPalette.flameLight, 8)
+            Body(stringResource(Res.string.march_siege_risk, region.failureGloom,
+                region.failureFragments, formatAmount(region.siegeCost * region.failureEmberFraction)),
+                AshPalette.muted)
             AshButton(
                 label = stringResource(Res.string.march_siege, formatAmount(region.siegeCost)),
                 enabled = canConquer(state, region), color = AshPalette.crimson,
                 modifier = Modifier.fillMaxWidth(), onClick = { RebootGraph.engine.siege(region.id) },
             )
         }
+        val upgradeNames = marchUpgradeRegions.filterValues { it == region.id }.keys
+            .map { stringResource(marchBuildingTitle(it)) }.joinToString(", ")
+        Body(stringResource(Res.string.march_siege_unlocks, upgradeNames),
+            if (conquered) AshPalette.teal else AshPalette.flameLight)
         specialistBuildings.forEach { buildingId ->
             Rule()
             Label(stringResource(Res.string.march_specialize, stringResource(marchBuildingTitle(buildingId))),
@@ -273,6 +288,12 @@ private fun marchBuildingTitle(id: String): StringResource = when (id) {
     "scoutlodge" -> Res.string.reboot_scoutlodge
     "shadowfoundry" -> Res.string.reboot_shadowfoundry
     "courtobservatory" -> Res.string.reboot_courtobservatory
+    "hollowmill" -> Res.string.reboot_hollowmill
+    "emberwell" -> Res.string.reboot_emberwell
+    "gravegarden" -> Res.string.reboot_gravegarden
+    "stormspire" -> Res.string.reboot_stormspire
+    "wyrmroost" -> Res.string.reboot_wyrmroost
+    "eclipsethrone" -> Res.string.reboot_eclipsethrone
     else -> Res.string.reboot_citadel
 }
 

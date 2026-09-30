@@ -24,6 +24,7 @@ import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /** This save remains separate from the released 0.2.x game. New fields have defaults for reboot saves. */
 private const val SAVE_KEY = "embercrown_ash_kingdom_v1"
@@ -143,6 +144,9 @@ data class RebootState(
     val edictCooldownSeconds: Int = 0,
     val fragments: Map<String, Int> = emptyMap(),
     val conqueredRegions: Set<String> = emptySet(),
+    val siegeFailures: Map<String, Int> = emptyMap(),
+    val lastSiegeResult: SiegeResult? = null,
+    val marchUpgradeRanks: Map<String, Int> = emptyMap(),
     val expedition: MarchExpedition? = null,
     val expeditionsCompleted: Int = 0,
     val lastExpeditionRegion: String? = null,
@@ -219,7 +223,8 @@ fun buildingProduction(building: RebootBuilding, state: RebootState): Double {
     }
     return building.output * level * (1.0 + level / 20.0) * masteryMultiplier *
         districtMultiplier(building.id, state) *
-        (if (state.specializations[building.id] == "industry") 1.4 else 1.0)
+        (if (state.specializations[building.id] == "industry") 1.4 else 1.0) *
+        marchUpgradeMultiplier(state, building.id)
 }
 
 fun rawProduction(state: RebootState): Double = RebootBuildings.all.sumOf { buildingProduction(it, state) }
@@ -573,7 +578,13 @@ class RebootEngine {
     }
 
     fun siege(regionId: String) {
-        mutate(SfxId.ASH_MARCH) { conquerRegion(it, regionId) }
+        val roll = Random.nextDouble()
+        mutate(SfxId.ASH_MARCH) { conquerRegion(it, regionId, roll) }
+        save()
+    }
+
+    fun buyMarchUpgrade(buildingId: String) {
+        mutate(SfxId.ASH_MASTERY) { buyMarchUpgrade(it, buildingId) }
         save()
     }
 

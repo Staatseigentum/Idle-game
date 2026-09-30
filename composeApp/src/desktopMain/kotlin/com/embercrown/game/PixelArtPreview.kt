@@ -53,7 +53,8 @@ fun main(args: Array<String>) {
     writeArt(
         File(outDir, "reboot_complete.png"),
         ashKingdomArt(RebootBuildings.all.associate { it.id to 1 }, 70, true,
-            RebootBuildings.all.associate { it.id to 2 }),
+            RebootBuildings.all.associate { it.id to 2 },
+            marchRanks = RebootBuildings.all.associate { it.id to 2 }),
         scale = 5,
     )
 

@@ -2,6 +2,9 @@ package com.embercrown.game.reboot
 
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.min
+import kotlin.math.pow
 
 /** The marches are optional during the first reign and become a second progression loop later. */
 data class LostRegion(
@@ -14,22 +17,35 @@ data class LostRegion(
     val defenderLevel: Int,
     val x: Int,
     val y: Int,
+    val siegeChance: Double,
+    val failureGloom: Int,
+    val failureEmberFraction: Double,
+    val failureFragments: Int,
 )
 
 object LostMarches {
     val originalIds = setOf("forest", "fen", "coast", "ruins")
     val all = listOf(
-        LostRegion("forest", 150_000.0, 25_000.0, 90, 350_000.0, "belltower", 3, 37, 72),
-        LostRegion("glassfields", 3_000_000.0, 500_000.0, 110, 9_000_000.0, "scoutlodge", 3, 68, 64),
-        LostRegion("fen", 12_000_000.0, 2_000_000.0, 150, 30_000_000.0, "moonforge", 3, 100, 83),
-        LostRegion("coast", 1_000_000_000.0, 160_000_000.0, 210, 2_500_000_000.0, "soulharbor", 1, 50, 35),
-        LostRegion("blackpass", 5_000_000_000.0, 800_000_000.0, 230, 15_000_000_000.0, "shadowfoundry", 2, 82, 27),
-        LostRegion("ruins", 90_000_000_000.0, 14_000_000_000.0, 270, 200_000_000_000.0, "citadel", 5, 119, 38),
-        LostRegion("court", 400_000_000_000.0, 60_000_000_000.0, 300, 800_000_000_000.0, "courtobservatory", 1, 131, 62),
+        LostRegion("forest", 150_000.0, 25_000.0, 90, 350_000.0, "belltower", 3, 37, 72, .80, 18, .20, 1),
+        LostRegion("glassfields", 3_000_000.0, 500_000.0, 110, 9_000_000.0, "scoutlodge", 3, 68, 64, .74, 22, .22, 1),
+        LostRegion("fen", 12_000_000.0, 2_000_000.0, 150, 30_000_000.0, "moonforge", 3, 100, 83, .69, 27, .24, 1),
+        LostRegion("coast", 1_000_000_000.0, 160_000_000.0, 210, 2_500_000_000.0, "soulharbor", 1, 50, 35, .64, 32, .26, 2),
+        LostRegion("blackpass", 5_000_000_000.0, 800_000_000.0, 230, 15_000_000_000.0, "shadowfoundry", 2, 82, 27, .60, 38, .28, 2),
+        LostRegion("ruins", 90_000_000_000.0, 14_000_000_000.0, 270, 200_000_000_000.0, "citadel", 5, 119, 38, .56, 44, .30, 2),
+        LostRegion("court", 400_000_000_000.0, 60_000_000_000.0, 300, 800_000_000_000.0, "courtobservatory", 1, 131, 62, .52, 50, .35, 2),
     )
 
     fun byId(id: String): LostRegion? = all.firstOrNull { it.id == id }
 }
+
+@Serializable
+data class SiegeResult(
+    val regionId: String,
+    val won: Boolean,
+    val embersLost: Double,
+    val fragmentsLost: Int,
+    val gloomGained: Int,
+)
 
 /** One expedition at a time; its end time is advanced by the same live/offline clock as buildings. */
 @Serializable
@@ -128,15 +144,84 @@ fun canConquer(state: RebootState, region: LostRegion): Boolean =
         (state.fragments[region.id] ?: 0) >= siegeFragmentCost(state) &&
         state.embers >= region.siegeCost
 
-fun conquerRegion(state: RebootState, id: String): RebootState {
+fun siegeWinChance(state: RebootState, region: LostRegion): Double =
+    (region.siegeChance +
+        (state.level(region.defenderId) - region.defenderLevel).coerceIn(0, 4) * .025 +
+        (state.siegeFailures[region.id] ?: 0).coerceIn(0, 3) * .08).coerceAtMost(.95)
+
+fun siegeFailureExtraCost(state: RebootState, region: LostRegion): Double =
+    min((state.embers - region.siegeCost).coerceAtLeast(0.0), floor(region.siegeCost * region.failureEmberFraction))
+
+fun conquerRegion(state: RebootState, id: String, roll: Double): RebootState {
     val region = LostMarches.byId(id) ?: return state
     if (!canConquer(state, region)) return state
+    val fragmentCost = siegeFragmentCost(state)
+    if (roll >= siegeWinChance(state, region)) {
+        val extra = siegeFailureExtraCost(state, region)
+        val gloomGained = min(region.failureGloom.toDouble(), 100.0 - state.gloom.coerceIn(0.0, 100.0)).toInt()
+        return withChronicle(state.copy(
+            embers = (state.embers - region.siegeCost - extra).coerceAtLeast(0.0),
+            fragments = state.fragments + (id to (state.fragments.getValue(id) - region.failureFragments)),
+            gloom = (state.gloom + region.failureGloom).coerceAtMost(100.0),
+            siegeFailures = state.siegeFailures + (id to ((state.siegeFailures[id] ?: 0) + 1)),
+            lastSiegeResult = SiegeResult(id, false, region.siegeCost + extra, region.failureFragments, gloomGained),
+        ))
+    }
     return withChronicle(state.copy(
         embers = state.embers - region.siegeCost,
-        fragments = state.fragments + (id to ((state.fragments[id] ?: 0) - siegeFragmentCost(state))),
+        fragments = state.fragments + (id to ((state.fragments[id] ?: 0) - fragmentCost)),
         conqueredRegions = state.conqueredRegions + id,
         relics = state.relics + 2,
         gloom = (state.gloom - 12.0).coerceAtLeast(0.0),
+        lastSiegeResult = SiegeResult(id, true, region.siegeCost, fragmentCost, 0),
+    ))
+}
+
+/** Each recovered march opens three ranks of local forge improvements for its buildings. */
+val marchUpgradeRegions = mapOf(
+    "coalpit" to "forest", "emberorchard" to "forest", "lanternwatch" to "forest", "belltower" to "forest",
+    "hollowmill" to "glassfields", "scoutlodge" to "glassfields",
+    "ashmarket" to "fen", "moonforge" to "fen",
+    "bonelibrary" to "coast", "soulharbor" to "coast",
+    "shadowfoundry" to "blackpass", "emberwell" to "blackpass",
+    "citadel" to "ruins", "gravegarden" to "ruins", "stormspire" to "ruins",
+    "courtobservatory" to "court", "wyrmroost" to "court", "eclipsethrone" to "court",
+)
+
+const val MAX_MARCH_UPGRADE_RANK = 3
+
+fun marchUpgradeMultiplier(state: RebootState, buildingId: String): Double =
+    if (marchUpgradeRegions[buildingId] in state.conqueredRegions)
+        1.35.pow((state.marchUpgradeRanks[buildingId] ?: 0).coerceIn(0, MAX_MARCH_UPGRADE_RANK)) else 1.0
+
+fun marchUpgradeCost(state: RebootState, building: RebootBuilding): Double {
+    val region = LostMarches.byId(marchUpgradeRegions[building.id] ?: return Double.POSITIVE_INFINITY)
+        ?: return Double.POSITIVE_INFINITY
+    val rank = state.marchUpgradeRanks[building.id] ?: 0
+    return if (rank >= MAX_MARCH_UPGRADE_RANK) Double.POSITIVE_INFINITY
+    else floor(maxOf(region.siegeCost * .20, building.baseCost * .35) * 2.5.pow(rank))
+}
+
+fun marchUpgradeFragmentCost(state: RebootState, buildingId: String): Int =
+    2 + (state.marchUpgradeRanks[buildingId] ?: 0)
+
+fun canBuyMarchUpgrade(state: RebootState, building: RebootBuilding): Boolean {
+    val regionId = marchUpgradeRegions[building.id] ?: return false
+    return regionId in state.conqueredRegions && state.level(building.id) > 0 &&
+        (state.marchUpgradeRanks[building.id] ?: 0) < MAX_MARCH_UPGRADE_RANK &&
+        state.embers >= marchUpgradeCost(state, building) &&
+        (state.fragments[regionId] ?: 0) >= marchUpgradeFragmentCost(state, building.id)
+}
+
+fun buyMarchUpgrade(state: RebootState, buildingId: String): RebootState {
+    val building = RebootBuildings.all.firstOrNull { it.id == buildingId } ?: return state
+    if (!canBuyMarchUpgrade(state, building)) return state
+    val regionId = marchUpgradeRegions.getValue(buildingId)
+    return withChronicle(state.copy(
+        embers = state.embers - marchUpgradeCost(state, building),
+        fragments = state.fragments + (regionId to
+            (state.fragments.getValue(regionId) - marchUpgradeFragmentCost(state, buildingId))),
+        marchUpgradeRanks = state.marchUpgradeRanks + (buildingId to ((state.marchUpgradeRanks[buildingId] ?: 0) + 1)),
     ))
 }
 

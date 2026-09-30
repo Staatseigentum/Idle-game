@@ -1,5 +1,16 @@
 # Embercrown changelog
 
+## 0.5.3 — The Price of a Crown
+
+Reclaiming the Lost Marches is now a gamble worth preparing for.
+
+- Each region has its own siege odds and consequences. A defeat costs the siege's embers plus a region-specific extra loss, some fragments, and gloom. The cost and chance are shown before you attack.
+- Stronger defenders and failed attempts improve your next chance. Victory still grants relics, clears gloom, and strengthens your reign.
+- Every reclaimed region unlocks three ranks of Border Forge upgrades for its buildings. Spend local fragments and embers to multiply each building's output.
+- Later buildings occupy clearer places in the kingdom skyline. Border Forge upgrades glow on the buildings, and a duplicate Marches list key no longer crashes the screen.
+
+**Your save is safe:** Existing progress loads normally. New siege attempts and Border Forge upgrades begin in your current reign.
+
 ## 0.5.2 — When Darkness Closes In
 
 The Gloom no longer stays behind the kingdom walls.

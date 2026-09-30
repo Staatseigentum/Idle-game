@@ -92,12 +92,23 @@ private fun kingdomCosmeticColors(flame: String, banner: String, sky: String): M
         'n' to cloth.first, 'N' to cloth.second)
 }
 
+private val kingdomCrests = mapOf(
+    "coalpit" to (27 to 80), "emberorchard" to (10 to 70), "hollowmill" to (134 to 66),
+    "lanternwatch" to (99 to 67), "belltower" to (47 to 43), "ashmarket" to (120 to 86),
+    "moonforge" to (115 to 72), "bonelibrary" to (44 to 64), "citadel" to (80 to 34),
+    "scoutlodge" to (45 to 85), "shadowfoundry" to (23 to 47),
+    "emberwell" to (10 to 87), "gravegarden" to (148 to 100), "soulharbor" to (9 to 69),
+    "stormspire" to (113 to 21), "courtobservatory" to (25 to 23),
+    "wyrmroost" to (149 to 37), "eclipsethrone" to (80 to 22),
+)
+
 /** The static scene is rasterized only when a building, the beacon or the gloom changes. */
 fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
                   masteries: Map<String, Int> = emptyMap(), conquered: Set<String> = emptySet(),
                   specializations: Map<String, String> = emptyMap(),
                   districts: Map<String, Int> = emptyMap(), siegeWon: Boolean = false,
-                  flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood"): PixelArt {
+                  flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood",
+                  marchRanks: Map<String, Int> = emptyMap()): PixelArt {
     val g = PixelGridBuilder(160, 120)
     for (y in 0..82) {
         val band = when {
@@ -214,9 +225,10 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.triangle(73, 45, 88, 45, 80, 33, 'W')
     }
     if ((levels["shadowfoundry"] ?: 0) > 0) {
-        g.rect(115, 77, 129, 93, 'o'); g.rect(117, 79, 127, 91, 'K')
-        g.triangle(113, 78, 131, 78, 122, 68, 'w')
-        g.rect(119, 85, 124, 91, 'R'); g.set(121, 84, 'P')
+        // Left midground: the foundry no longer disappears behind the mill and moon forge.
+        g.rect(15, 59, 31, 78, 'o'); g.rect(17, 61, 29, 76, 'K')
+        g.triangle(13, 60, 33, 60, 23, 48, 'w')
+        g.rect(20, 66, 26, 75, 'R'); g.set(23, 65, 'P')
     }
     if ((levels["emberwell"] ?: 0) > 0) {
         g.circle(10, 98, 9, 'o'); g.circle(10, 98, 6, 'K')
@@ -224,11 +236,12 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.rect(4, 89, 16, 91, 'B')
     }
     if ((levels["gravegarden"] ?: 0) > 0) {
-        g.rect(144, 95, 158, 101, 'p')
-        for (x in listOf(146, 152, 157)) {
-            g.rect(x, 87, x + 2, 95, 'B'); g.circle(x + 1, 86, 2, 'B')
+        // Foreground terrace keeps the graves visible beneath the later wyrm roost.
+        g.rect(136, 112, 158, 118, 'p')
+        for (x in listOf(139, 147, 155)) {
+            g.rect(x, 104, x + 2, 112, 'B'); g.circle(x + 1, 103, 2, 'B')
         }
-        g.rect(149, 83, 150, 90, 'f')
+        g.rect(150, 100, 151, 107, 'f')
     }
     if ((levels["soulharbor"] ?: 0) > 0) {
         g.rect(0, 80, 16, 86, 'K'); g.rect(3, 70, 5, 81, 'o')
@@ -241,16 +254,17 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.rect(112, 23, 114, 33, 'B'); g.set(113, 22, 'P')
     }
     if ((levels["courtobservatory"] ?: 0) > 0) {
-        g.rect(87, 42, 98, 57, 'o'); g.rect(89, 44, 96, 55, 'K')
-        g.circle(92, 39, 7, 'p'); g.circle(92, 39, 4, 'B')
-        g.set(92, 39, 'P')
+        // Its own high left skyline instead of being hidden by the citadel tower.
+        g.rect(18, 35, 33, 53, 'o'); g.rect(20, 37, 31, 51, 'K')
+        g.circle(25, 31, 8, 'p'); g.circle(25, 31, 5, 'B')
+        g.set(25, 31, 'P')
     }
     if ((levels["wyrmroost"] ?: 0) > 0) {
-        g.rect(143, 68, 157, 84, 'o'); g.rect(145, 70, 155, 82, 'W')
-        g.triangle(138, 69, 159, 69, 149, 55, 'w')
-        g.triangle(138, 66, 146, 62, 145, 73, 'R')
-        g.triangle(150, 64, 159, 60, 154, 73, 'R')
-        g.rect(148, 67, 151, 70, 'Y')
+        g.rect(142, 51, 157, 68, 'o'); g.rect(144, 53, 155, 66, 'W')
+        g.triangle(138, 52, 159, 52, 149, 38, 'w')
+        g.triangle(138, 49, 146, 45, 145, 56, 'R')
+        g.triangle(150, 47, 159, 43, 154, 56, 'R')
+        g.rect(148, 50, 151, 53, 'Y')
     }
     if ((levels["eclipsethrone"] ?: 0) > 0) {
         g.circle(80, 22, 15, 'p'); g.circle(80, 22, 11, 'R'); g.circle(80, 22, 8, 'a')
@@ -259,16 +273,7 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         g.rect(79, 36, 81, 42, 'Y')
     }
     // Mastery illuminates a structure's crest, so upgrades are visible in the kingdom too.
-    val crests = mapOf(
-        "coalpit" to (27 to 80), "emberorchard" to (10 to 70), "hollowmill" to (134 to 66),
-        "lanternwatch" to (99 to 67), "belltower" to (47 to 43), "ashmarket" to (120 to 86),
-        "moonforge" to (115 to 72), "bonelibrary" to (44 to 64), "citadel" to (80 to 34),
-        "scoutlodge" to (45 to 85), "shadowfoundry" to (122 to 67),
-        "emberwell" to (10 to 87), "gravegarden" to (150 to 82), "soulharbor" to (9 to 69),
-        "stormspire" to (113 to 21), "courtobservatory" to (92 to 32),
-        "wyrmroost" to (149 to 54), "eclipsethrone" to (80 to 22),
-    )
-    for ((id, crest) in crests) {
+    for ((id, crest) in kingdomCrests) {
         val tier = masteries[id] ?: 0
         if (tier > 0 && (levels[id] ?: 0) > 0) {
             g.circle(crest.first, crest.second, tier + 1, if (tier >= 3) 'Y' else 'P')
@@ -276,9 +281,19 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
         }
     }
     specializations.forEach { (id, path) ->
-        crests[id]?.let { (x, y) ->
+        kingdomCrests[id]?.let { (x, y) ->
             g.ring(x, y, 5, 3, if (path == "industry") 'E' else 'P')
             g.set(x, y, if (path == "industry") 'Y' else 'B')
+        }
+    }
+    marchRanks.forEach { (id, rank) ->
+        if (rank > 0 && (levels[id] ?: 0) > 0) kingdomCrests[id]?.let { (x, y) ->
+            val reach = 3 + rank.coerceAtMost(3)
+            g.set(x - reach, y, 'Y')
+            g.set(x + reach, y, 'Y')
+            g.set(x, y - reach, 'Y')
+            if (rank >= 2) g.set(x, y + reach, 'E')
+            if (rank >= 3) g.line(x - 1, y - reach - 2, x + 1, y - reach - 2, 'E')
         }
     }
     // Each liberated border raises an illuminated banner in the main kingdom skyline.
@@ -358,7 +373,8 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
 fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean, frame: Int,
                         masteries: Map<String, Int> = emptyMap(), specializations: Map<String, String> = emptyMap(),
                         districts: Map<String, Int> = emptyMap(), siegeWon: Boolean = false,
-                        flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood"): PixelArt {
+                        flameLook: String = "ember", bannerLook: String = "ash", skyLook: String = "blood",
+                        marchRanks: Map<String, Int> = emptyMap()): PixelArt {
     val g = PixelGridBuilder(160, 120)
     for (i in 0 until 20) {
         val x = (i * 47 + i * i * 13) % 158 + 1
@@ -428,14 +444,14 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
     }
     if ((levels["shadowfoundry"] ?: 0) > 0) repeat(4) { spark ->
         val rise = (frame * 2 + spark * 7) % 17
-        g.set(119 + (spark * 3 + frame) % 7, 84 - rise, if (spark % 2 == 0) 'P' else 'E')
+        g.set(20 + (spark * 3 + frame) % 7, 65 - rise, if (spark % 2 == 0) 'P' else 'E')
     }
     if ((levels["emberwell"] ?: 0) > 0) {
         g.circle(10, 98, if (frame % 8 < 4) 3 else 2, 'E')
         g.set(8 + frame % 5, 91 - frame % 7, 'Y')
     }
     if ((levels["gravegarden"] ?: 0) > 0) repeat(3) { i ->
-        g.set(146 + i * 5, 82 - (frame + i * 3) % 6, if (frame % 2 == 0) 'P' else 'V')
+        g.set(139 + i * 8, 99 - (frame + i * 3) % 6, if (frame % 2 == 0) 'P' else 'V')
     }
     if ((levels["soulharbor"] ?: 0) > 0) {
         val sail = frame / 3 % 3
@@ -447,14 +463,14 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         g.line(113, 22, 120 - frame % 3, 36, 'S')
     }
     if ((levels["courtobservatory"] ?: 0) > 0) {
-        g.ring(92, 39, if (frame % 8 < 4) 6 else 5, 5, 'P')
-        g.set(92 + frame % 5 - 2, 39, 'Y')
+        g.ring(25, 31, if (frame % 8 < 4) 7 else 6, 5, 'P')
+        g.set(25 + frame % 5 - 2, 31, 'Y')
     }
     if ((levels["wyrmroost"] ?: 0) > 0) {
         val wing = if (frame / 3 % 2 == 0) 8 else 4
-        g.line(149, 65, 139, 65 - wing, 'R', 2)
-        g.line(150, 65, 159, 65 - wing, 'R', 2)
-        g.set(151 + frame % 4, 72 - frame % 5, 'E')
+        g.line(149, 48, 139, 48 - wing, 'R', 2)
+        g.line(150, 48, 159, 48 - wing, 'R', 2)
+        g.set(151 + frame % 4, 55 - frame % 5, 'E')
     }
     if ((levels["eclipsethrone"] ?: 0) > 0) {
         g.circle(80, 22, if (frame % 16 < 8) 10 else 9, 'P')
@@ -463,13 +479,19 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
     }
     val specializedCrests = mapOf("coalpit" to (27 to 80), "emberorchard" to (10 to 70),
         "lanternwatch" to (99 to 67), "ashmarket" to (120 to 86),
-        "scoutlodge" to (45 to 85), "shadowfoundry" to (122 to 67),
-        "courtobservatory" to (92 to 32), "moonforge" to (115 to 72),
+        "scoutlodge" to (45 to 85), "shadowfoundry" to (23 to 47),
+        "courtobservatory" to (25 to 23), "moonforge" to (115 to 72),
         "bonelibrary" to (44 to 64), "citadel" to (80 to 34))
     specializations.forEach { (id, path) ->
         specializedCrests[id]?.let { (x, y) ->
             val rise = frame % 12
             g.set(x - 2 + frame % 5, y - 4 - rise, if (path == "industry") 'Y' else 'P')
+        }
+    }
+    marchRanks.forEach { (id, rank) ->
+        if (rank > 0 && (levels[id] ?: 0) > 0) kingdomCrests[id]?.let { (x, y) ->
+            val phase = (frame + id.length * 7) % 16
+            g.set(x - 5 + phase % 11, y - 7 - phase / 4, if (rank >= 3) 'Y' else 'E')
         }
     }
     val districtAnchors = mapOf("hearth" to (21 to 104), "bell" to (49 to 103),

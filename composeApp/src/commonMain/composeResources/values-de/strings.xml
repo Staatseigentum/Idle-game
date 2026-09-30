@@ -107,6 +107,15 @@
     <string name="march_siege">BELAGERUNG BRECHEN · %1$s GLUT</string>
     <string name="march_siege_need">Benötigt %1$d Fragmente und %2$s Stufe %3$d.</string>
     <string name="march_siege_reward">Sieg gibt 2 Relikte, -12 Finsternis und +5% Produktion in dieser Herrschaft.</string>
+    <string name="march_siege_chance">SIEGCHANCE · %1$d%%</string>
+    <string name="march_siege_risk">Niederlage: +%1$d Finsternis, -%2$d Fragmente, bis zu %3$s zusätzliche Glut. Die Belagerungskosten fallen immer an. Zusätzliche Stufen des Verteidigergebäudes und Fehlschläge verbessern die Chance.</string>
+    <string name="march_siege_victory">SIEG · Die Marke gehört dir. Neue Gebäude-Upgrades sind verfügbar.</string>
+    <string name="march_siege_defeat">NIEDERLAGE · %1$s Glut und %2$d Fragmente verloren; +%3$d Finsternis. Sammle dich und versuche es erneut.</string>
+    <string name="march_siege_unlocks">GRENZSCHMIEDEN NACH DEM SIEG: %1$s</string>
+    <string name="march_upgrade_title">GRENZSCHMIEDE · %1$d/%2$d · x%3$s ERTRAG</string>
+    <string name="march_upgrade_effect">Jede Stufe multipliziert den Ertrag dieses Gebäudes mit 1,35. Benötigt Fragmente der zurückeroberten Marke.</string>
+    <string name="march_upgrade_buy">UPGRADE SCHMIEDEN · %1$s GLUT + %2$d FRAGMENTE</string>
+    <string name="march_upgrade_maxed">GRENZSCHMIEDE VOLLSTÄNDIG RESTAURIERT</string>
     <string name="march_specialize">%1$s SPEZIALISIEREN</string>
     <string name="march_specialize_need">Benötigt Meisterschaft I und 3 Fragmente dieser Region.</string>
     <string name="march_choose_path">DIESEN PFAD WÄHLEN</string>

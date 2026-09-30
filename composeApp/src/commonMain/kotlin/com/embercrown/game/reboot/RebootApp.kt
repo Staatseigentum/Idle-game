@@ -569,12 +569,13 @@ private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, high
     val flameLook = cosmeticStyle(state, "flame")
     val bannerLook = cosmeticStyle(state, "banner")
     val skyLook = cosmeticStyle(state, "sky")
-    val art = remember(state.levels, state.buildingUpgrades, state.conqueredRegions,
+    val art = remember(state.levels, state.buildingUpgrades, state.marchUpgradeRanks, state.conqueredRegions,
         state.specializations, state.districtLevels, state.eclipseSiegeStage, gloomBand,
         state.beaconSeconds > 0, flameLook, bannerLook, skyLook) {
         ashKingdomArt(state.levels, gloomBand * 10, state.beaconSeconds > 0,
             state.buildingUpgrades, state.conqueredRegions, state.specializations,
-            state.districtLevels, state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
+            state.districtLevels, state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook,
+            state.marchUpgradeRanks)
     }
     var tapCount by remember { mutableIntStateOf(0) }
     var tapPosition by remember { mutableStateOf(Offset.Zero) }
@@ -639,12 +640,12 @@ private fun KingdomMotionLayer(state: RebootState, gloomBand: Int, flameLook: St
             frame = (frame + 1) % 96
         }
     }
-    val motion = remember(state.levels, state.buildingUpgrades, state.specializations,
+    val motion = remember(state.levels, state.buildingUpgrades, state.marchUpgradeRanks, state.specializations,
         state.districtLevels, state.eclipseSiegeStage, gloomBand, state.beaconSeconds > 0,
         flameLook, bannerLook, skyLook, frame) {
         ashKingdomMotionArt(state.levels, gloomBand * 10, state.beaconSeconds > 0, frame,
             state.buildingUpgrades, state.specializations, state.districtLevels,
-            state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
+            state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook, state.marchUpgradeRanks)
     }
     PixelArtImage(motion, modifier = Modifier.fillMaxSize(), fit = PixelFit.Cover)
 }
@@ -889,6 +890,27 @@ private fun StructureCard(state: RebootState, building: RebootBuilding, mode: Bu
         }
       } else if (unlocked) {
         Label(stringResource(Res.string.reboot_mastered), AshPalette.teal, 7)
+      }
+      val marchRegionId = marchUpgradeRegions[building.id]
+      if (unlocked && marchRegionId != null && marchRegionId in state.conqueredRegions) {
+        Rule()
+        val marchRank = state.marchUpgradeRanks[building.id] ?: 0
+        Label(stringResource(Res.string.march_upgrade_title, marchRank, MAX_MARCH_UPGRADE_RANK,
+            formatAmount(marchUpgradeMultiplier(state, building.id))), AshPalette.flameLight, 7)
+        if (marchRank < MAX_MARCH_UPGRADE_RANK) {
+            val fragmentCost = marchUpgradeFragmentCost(state, building.id)
+            Body(stringResource(Res.string.march_upgrade_effect), AshPalette.muted)
+            AshButton(
+                label = stringResource(Res.string.march_upgrade_buy,
+                    formatAmount(marchUpgradeCost(state, building)), fragmentCost),
+                enabled = canBuyMarchUpgrade(state, building),
+                color = AshPalette.flame,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { RebootGraph.engine.buyMarchUpgrade(building.id) },
+            )
+        } else {
+            Body(stringResource(Res.string.march_upgrade_maxed), AshPalette.teal)
+        }
       }
     }
 }

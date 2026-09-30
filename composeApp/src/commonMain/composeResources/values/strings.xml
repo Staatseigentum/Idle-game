@@ -107,6 +107,15 @@
     <string name="march_siege">BREAK THE SIEGE · %1$s EMBERS</string>
     <string name="march_siege_need">Requires %1$d fragments and %2$s level %3$d.</string>
     <string name="march_siege_reward">Victory grants 2 relics, -12 gloom, and +5% production this reign.</string>
+    <string name="march_siege_chance">VICTORY CHANCE · %1$d%%</string>
+    <string name="march_siege_risk">Defeat: +%1$d gloom, -%2$d fragments, up to %3$s extra embers. The siege cost is always spent. More defender levels and failed attempts improve your odds.</string>
+    <string name="march_siege_victory">VICTORY · The march is yours. New building upgrades are available.</string>
+    <string name="march_siege_defeat">DEFEAT · Lost %1$s embers and %2$d fragments; +%3$d gloom. Regroup and try again.</string>
+    <string name="march_siege_unlocks">BORDER FORGES AFTER VICTORY: %1$s</string>
+    <string name="march_upgrade_title">BORDER FORGE · %1$d/%2$d · x%3$s OUTPUT</string>
+    <string name="march_upgrade_effect">Each rank multiplies this building's output by 1.35. Requires fragments from its reclaimed march.</string>
+    <string name="march_upgrade_buy">FORGE UPGRADE · %1$s EMBERS + %2$d FRAGMENTS</string>
+    <string name="march_upgrade_maxed">BORDER FORGE FULLY RESTORED</string>
     <string name="march_specialize">SPECIALIZE %1$s</string>
     <string name="march_specialize_need">Requires mastery I and 3 fragments from this region.</string>
     <string name="march_choose_path">CHOOSE THIS PATH</string>
