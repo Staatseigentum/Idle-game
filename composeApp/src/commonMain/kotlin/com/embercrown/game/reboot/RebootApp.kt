@@ -81,7 +81,7 @@ private enum class Page(val label: StringResource) {
     SYSTEM(Res.string.reboot_tab_settings),
 }
 
-private enum class BuildMode { ONE, TEN, MAX }
+internal enum class BuildMode { ONE, TEN, MAX }
 private enum class DesktopShelf { BUILDINGS, CHRONICLE, SYSTEM }
 private enum class LeftTab(val label: StringResource) {
     GOALS(Res.string.reboot_left_goals),
@@ -128,12 +128,9 @@ fun RebootApp() {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 if (state.prestigePending && !ritualRunning) {
                     PrestigeScreen(state, onContinue = RebootGraph.engine::beginNextReign)
-                } else if (maxWidth >= 1020.dp) {
-                    DesktopKingdom(state = state, buildMode = buildMode, onBuildMode = { buildMode = it },
-                        onOmen = { showOmen = true }, onRitual = { confirmRitual = true },
-                        onReset = { confirmReset = true })
                 } else {
-                    MobileKingdom(state = state, buildMode = buildMode, onBuildMode = { buildMode = it },
+                    ThroneRoom(state = state, compact = maxWidth < 1020.dp,
+                        buildMode = buildMode, onBuildMode = { buildMode = it },
                         onOmen = { showOmen = true }, onRitual = { confirmRitual = true },
                         onReset = { confirmReset = true })
                 }
@@ -549,7 +546,7 @@ private fun ResourceBlock(label: String, value: String, color: Color,
 }
 
 @Composable
-private fun GloomBar(gloom: Double, modifier: Modifier = Modifier) {
+internal fun GloomBar(gloom: Double, modifier: Modifier = Modifier) {
     val smooth by animateFloatAsState(gloom.toFloat(), animationSpec = tween(850))
     val pressure = gloomVisuals(gloom).pressure
     val filledColor = lerp(AshPalette.crimson, Color(0xFFFF644D), pressure)
@@ -564,7 +561,7 @@ private fun GloomBar(gloom: Double, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, highlight: Boolean = false) {
+internal fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, highlight: Boolean = false) {
     val gloomBand = (state.gloom / 10).toInt()
     val flameLook = cosmeticStyle(state, "flame")
     val bannerLook = cosmeticStyle(state, "banner")
@@ -651,7 +648,7 @@ private fun KingdomMotionLayer(state: RebootState, gloomBand: Int, flameLook: St
 }
 
 @Composable
-private fun SceneActionBar(state: RebootState) {
+internal fun SceneActionBar(state: RebootState) {
     Row(
         modifier = Modifier.fillMaxWidth().background(AshPalette.panel).padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -662,7 +659,7 @@ private fun SceneActionBar(state: RebootState) {
 }
 
 @Composable
-private fun BuildModeSelector(selected: BuildMode, onSelect: (BuildMode) -> Unit, guided: Boolean = false) {
+internal fun BuildModeSelector(selected: BuildMode, onSelect: (BuildMode) -> Unit, guided: Boolean = false) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         BuildMode.entries.forEach { mode ->
             AshButton(
@@ -681,7 +678,7 @@ private fun BuildModeSelector(selected: BuildMode, onSelect: (BuildMode) -> Unit
 }
 
 @Composable
-private fun GoalText(state: RebootState) {
+internal fun GoalText(state: RebootState) {
     val next = nextMilestone(state)
     Body(
         when {
@@ -695,7 +692,7 @@ private fun GoalText(state: RebootState) {
 }
 
 @Composable
-private fun MilestonePanel(state: RebootState) {
+internal fun MilestonePanel(state: RebootState) {
     val next = nextMilestone(state) ?: return
     val name = when (next.id) {
         "spark" -> Res.string.reboot_seal_spark
@@ -771,7 +768,7 @@ internal fun RelicForgePanel(state: RebootState) {
 }
 
 @Composable
-private fun StructureCard(state: RebootState, building: RebootBuilding, mode: BuildMode, compact: Boolean) {
+internal fun StructureCard(state: RebootState, building: RebootBuilding, mode: BuildMode, compact: Boolean) {
     val name = when (building.id) {
         "coalpit" -> Res.string.reboot_coalpit to Res.string.reboot_coalpit_desc
         "emberorchard" -> Res.string.reboot_emberorchard to Res.string.reboot_emberorchard_desc
@@ -930,7 +927,7 @@ private fun AnimatedBuildingIcon(id: String, unlocked: Boolean) {
 }
 
 @Composable
-private fun BeaconQuickAction(state: RebootState, compact: Boolean) {
+internal fun BeaconQuickAction(state: RebootState, compact: Boolean) {
     val cost = beaconCost(state)
     val ready = state.beaconSeconds == 0 && state.beaconCooldownSeconds == 0 && state.embers >= cost
     val status = when {
@@ -966,7 +963,7 @@ private fun BeaconQuickAction(state: RebootState, compact: Boolean) {
 }
 
 @Composable
-private fun RitualPanel(state: RebootState, onRitual: () -> Unit) {
+internal fun RitualPanel(state: RebootState, onRitual: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Label(stringResource(Res.string.reboot_ritual), AshPalette.crimson, 10)
         Body(
@@ -987,7 +984,7 @@ private fun RitualPanel(state: RebootState, onRitual: () -> Unit) {
 }
 
 @Composable
-private fun SystemPanel(onReset: () -> Unit) {
+internal fun SystemPanel(onReset: () -> Unit) {
     val uiSettings by RebootGraph.uiSettings.state.collectAsState()
     val state by RebootGraph.engine.state.collectAsState()
     Column(
@@ -998,6 +995,7 @@ private fun SystemPanel(onReset: () -> Unit) {
         Body(stringResource(Res.string.reboot_saved))
         BlueprintPanel(state)
         GuideLibrary(state)
+        ThroneDiscoveryLibrary(state)
         Label(stringResource(Res.string.reboot_language), AshPalette.flameLight, 9)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(null to stringResource(Res.string.reboot_language_system), "de" to "DE", "en" to "EN").forEach { (code, name) ->

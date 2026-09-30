@@ -43,9 +43,9 @@ data class RebootBuilding(
 object RebootBuildings {
     val all = listOf(
         RebootBuilding("coalpit", 15.0, 1.18, 0.20, 0.0),
-        RebootBuilding("emberorchard", 55.0, 1.18, 0.52, 30.0),
-        RebootBuilding("hollowmill", 130.0, 1.19, 1.20, 70.0),
-        RebootBuilding("lanternwatch", 400.0, 1.19, 3.4, 230.0),
+        RebootBuilding("emberorchard", 85.0, 1.18, 0.52, 30.0),
+        RebootBuilding("hollowmill", 210.0, 1.19, 1.20, 70.0),
+        RebootBuilding("lanternwatch", 600.0, 1.19, 3.4, 230.0),
         RebootBuilding("belltower", 1_100.0, 1.20, 8.0, 650.0),
         RebootBuilding("ashmarket", 3_800.0, 1.20, 24.0, 2_300.0),
         RebootBuilding("moonforge", 9_500.0, 1.21, 60.0, 6_000.0),
@@ -163,6 +163,10 @@ data class RebootState(
     val courtTactic: String = "ward",
     val blueprintLevels: Map<String, Int> = emptyMap(),
     val guideSeen: Set<String> = emptySet(),
+    /** Systems stay discovered after an Ash Ritual, even when buildings reset. */
+    val discoveredSystems: Set<String> = emptySet(),
+    /** Null migrates pre-Throne saves without replaying every new-system introduction. */
+    val introductionsSeen: Set<String>? = null,
     val relicSetId: String = "none",
     val relicSetCooldownSeconds: Int = 0,
     /** Existing saves default to completed; only a genuinely new save starts at the welcome screen. */
@@ -298,6 +302,29 @@ fun canRitual(state: RebootState): Boolean =
     !state.prestigePending && "crown" in state.claimedMilestones && state.level("eclipsethrone") > 0 &&
         trialGoalMet(state)
 
+/** One-time discoveries are stored; existing saves also infer them from their progress. */
+fun discoveredSystems(state: RebootState): Set<String> = buildSet {
+    addAll(state.discoveredSystems)
+    // Legacy pre-Throne saves have no discovery history. New saves carry exactly what they found.
+    if (state.reign > 1 && state.discoveredSystems.isEmpty())
+        addAll(listOf("buildings", "realm", "marches", "power", "crown", "chronicle", "beacon"))
+    if (state.level("coalpit") > 0) add("buildings")
+    if (state.claimedMilestones.isNotEmpty() || state.claimedOrders.isNotEmpty()) add("realm")
+    if (state.level("scoutlodge") > 0 || state.expeditionsCompleted > 0 || state.conqueredRegions.isNotEmpty()) add("marches")
+    if (state.level("bonelibrary") > 0 || state.conqueredRegions.isNotEmpty() ||
+        state.craftedArtifacts.isNotEmpty() || state.completedTrials.isNotEmpty()) add("power")
+    if (state.level("citadel") > 0 || state.courtVictories.isNotEmpty() || canRitual(state)) add("crown")
+    if (state.chronicleEntries.isNotEmpty()) add("chronicle")
+    if (state.beaconsLit > 0 || (state.tutorialStep >= TUTORIAL_DONE && state.gloom >= 18.0)) add("beacon")
+}
+
+fun withDiscoveries(state: RebootState): RebootState {
+    val known = discoveredSystems(state)
+    val seen = state.introductionsSeen ?: if (state.tutorialStep in 0..4) emptySet() else known
+    return state.copy(discoveredSystems = known,
+        introductionsSeen = if (state.tutorialStep in 3..4) seen + "buildings" else seen)
+}
+
 /** Tutorial rewards and stage changes live in the state transition, never in composition. */
 fun withTutorialProgress(state: RebootState): RebootState {
     var current = state
@@ -306,8 +333,8 @@ fun withTutorialProgress(state: RebootState): RebootState {
             current.tutorialStep == 1 && current.lifetimeEmbers >= 15.0 -> current.copy(tutorialStep = 2)
             current.tutorialStep == 2 && current.level("coalpit") >= 1 -> current.copy(
                 tutorialStep = 3,
-                embers = current.embers + 350.0,
-                lifetimeEmbers = current.lifetimeEmbers + 350.0,
+                embers = current.embers + 80.0,
+                lifetimeEmbers = current.lifetimeEmbers + 80.0,
             )
             current.tutorialStep == 3 && current.level("coalpit") >= 5 -> current.copy(tutorialStep = 4)
             current.tutorialStep == 4 && current.mastery("coalpit") >= 1 -> current.copy(tutorialStep = TUTORIAL_DONE)
@@ -336,6 +363,8 @@ fun performAshRitual(state: RebootState, now: Long = nowEpochSeconds()): RebootS
         courtVictories = state.courtVictories,
         blueprintLevels = state.blueprintLevels,
         guideSeen = state.guideSeen,
+        discoveredSystems = discoveredSystems(state),
+        introductionsSeen = state.introductionsSeen,
         craftedArtifacts = state.craftedArtifacts,
         equippedArtifacts = state.equippedArtifacts,
         completedTrials = state.completedTrials + listOfNotNull(state.activeTrialId),
@@ -372,7 +401,7 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
             embers = current.embers + gained,
             lifetimeEmbers = current.lifetimeEmbers + gained,
             autoStokeSeconds = autoProgress - autoTicks * 5.0,
-            gloom = (current.gloom + (if (current.tutorialStep in 1..2) 0.0 else step) *
+            gloom = (current.gloom + (if (current.tutorialStep in 1..4) 0.0 else step) *
                 (0.11 + raw / (raw + 200.0) * 0.08) *
                 (1.0 - current.relicRank("nightward") * 0.12) *
                 (if (current.specializations["coalpit"] == "utility") 0.9 else 1.0) *
@@ -403,7 +432,7 @@ fun advanceReboot(s: RebootState, seconds: Double, active: Boolean, now: Long = 
         }
         remaining -= step
     }
-    return withChronicle(withTutorialProgress(current.copy(lastPlayedEpochSeconds = now)))
+    return withDiscoveries(withChronicle(withTutorialProgress(current.copy(lastPlayedEpochSeconds = now))))
 }
 
 /** The engine owns all progression and saves every successful purchase/claim. */
@@ -420,7 +449,7 @@ class RebootEngine {
     private fun mutate(sound: SfxId, change: (RebootState) -> RebootState) {
         while (true) {
             val previous = _state.value
-            val next = change(previous)
+            val next = withDiscoveries(change(previous))
             if (next == previous) return
             if (_state.compareAndSet(previous, next)) {
                 _soundEvents.tryEmit(sound)
@@ -658,10 +687,10 @@ class RebootEngine {
         val raw: String? = settings[SAVE_KEY]
         val saved = raw?.let { runCatching { json.decodeFromString<RebootState>(it) }.getOrNull() }
             ?: RebootState(tutorialStep = 0, tutorialAcknowledged = false)
-        if (saved.tutorialStep == 0) return saved.copy(lastPlayedEpochSeconds = nowEpochSeconds())
-        if (saved.prestigePending) return saved.copy(lastPlayedEpochSeconds = nowEpochSeconds())
+        if (saved.tutorialStep == 0) return withDiscoveries(saved.copy(lastPlayedEpochSeconds = nowEpochSeconds()))
+        if (saved.prestigePending) return withDiscoveries(saved.copy(lastPlayedEpochSeconds = nowEpochSeconds()))
         val elapsed = (nowEpochSeconds() - saved.lastPlayedEpochSeconds).coerceIn(0L, OFFLINE_CAP_SECONDS)
-        if (saved.lastPlayedEpochSeconds <= 0 || elapsed <= 0) return withChronicle(saved)
+        if (saved.lastPlayedEpochSeconds <= 0 || elapsed <= 0) return withDiscoveries(withChronicle(saved))
         val resumed = advanceReboot(saved, elapsed.toDouble(), active = false)
         return if (elapsed >= 60) resumed.copy(
             offlineEmbers = resumed.embers - saved.embers,
@@ -687,6 +716,14 @@ class RebootEngine {
 
     fun acknowledgeTutorial() {
         mutate(SfxId.ASH_PAGE) { it.copy(tutorialAcknowledged = true) }
+        save()
+    }
+
+    fun acknowledgeDiscovery(id: String) {
+        mutate(SfxId.ASH_GUIDE) { state ->
+            if (id !in discoveredSystems(state)) state
+            else state.copy(introductionsSeen = (state.introductionsSeen ?: emptySet()) + id)
+        }
         save()
     }
 

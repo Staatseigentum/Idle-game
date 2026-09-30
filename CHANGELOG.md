@@ -1,5 +1,17 @@
 # Embercrown changelog
 
+## 0.5.5 — The Throne Room
+
+Your kingdom has room to breathe. The first reign now begins in the Throne Room, with the animated realm and one clear next step in focus.
+
+- A calmer HUD puts your kingdom, embers and current objective first. Buildings, the Lost Marches, Realm, Power, Crown and Chronicle appear as you discover the buildings and milestones that make them useful.
+- New paths introduce themselves when they open. Follow the highlighted tab to learn what Realm orders, Marches patrols, artifacts and the Ash Ritual do, or revisit the explanations later in System.
+- The building view grows with your reign instead of showing the entire catalogue at once. Your first Coalpit is raised directly from the guide before the Buildings tab opens.
+- The opening pace is gentler: a smaller starting ember gift and higher costs for the first few buildings make each early choice matter. Gloom waits until the guided opening is complete.
+- Desktop navigation is more compact, while the same step-by-step journey works on Android.
+
+**Your save is safe:** Existing progress carries over. Already discovered systems remain available after an Ash Ritual; older saves will not be forced through the new introductions.
+
 ## 0.5.3 — The Price of a Crown
 
 Reclaiming the Lost Marches is now a gamble worth preparing for.
