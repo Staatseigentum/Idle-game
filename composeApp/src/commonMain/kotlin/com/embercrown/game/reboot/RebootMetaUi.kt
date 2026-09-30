@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -181,6 +184,39 @@ internal fun OfflineReport(state: RebootState, onContinue: () -> Unit) {
 internal fun ChroniclePanel(state: RebootState) {
     var wardrobeOpen by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        ChronicleHeading(state, wardrobeOpen) { wardrobeOpen = !wardrobeOpen }
+        if (wardrobeOpen) ChronicleWardrobe(state)
+        StatCard(state)
+        ProductionLedger(state)
+        Label(stringResource(Res.string.reboot_chronicle_entries, state.chronicleEntries.size, CrownChronicle.all.size), AshPalette.flameLight, 9)
+        CrownChronicle.all.forEach { entry -> ChronicleEntryCard(state, entry) }
+    }
+}
+
+@Composable
+internal fun MobileChroniclePanel(state: RebootState) {
+    var wardrobeOpen by remember { mutableStateOf(false) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(key = "heading") {
+            ChronicleHeading(state, wardrobeOpen) { wardrobeOpen = !wardrobeOpen }
+        }
+        if (wardrobeOpen) item(key = "wardrobe") { ChronicleWardrobe(state) }
+        item(key = "stats") { StatCard(state) }
+        item(key = "production") { ProductionLedger(state) }
+        item(key = "entry-count") {
+            Label(stringResource(Res.string.reboot_chronicle_entries, state.chronicleEntries.size, CrownChronicle.all.size), AshPalette.flameLight, 9)
+        }
+        items(CrownChronicle.all, key = { it.id }) { entry -> ChronicleEntryCard(state, entry) }
+    }
+}
+
+@Composable
+private fun ChronicleHeading(state: RebootState, wardrobeOpen: Boolean, onToggleWardrobe: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Label(stringResource(Res.string.reboot_chronicle), AshPalette.flameLight, 11)
         Body(stringResource(Res.string.reboot_chronicle_hint), AshPalette.bone)
         TrophyShelf(state)
@@ -188,36 +224,34 @@ internal fun ChroniclePanel(state: RebootState) {
             label = stringResource(if (wardrobeOpen) Res.string.chron_wardrobe_close
                 else Res.string.chron_wardrobe_open),
             enabled = true, modifier = Modifier.fillMaxWidth(),
-            onClick = { wardrobeOpen = !wardrobeOpen },
+            onClick = onToggleWardrobe,
         )
-        if (wardrobeOpen) ChronicleWardrobe(state)
-        StatCard(state)
-        ProductionLedger(state)
-        Label(stringResource(Res.string.reboot_chronicle_entries, state.chronicleEntries.size, CrownChronicle.all.size), AshPalette.flameLight, 9)
-        CrownChronicle.all.forEach { entry ->
-            val earned = entry.id in state.chronicleEntries
-            val (title, hint) = chronicleText(entry.id)
-            Row(
-                modifier = Modifier.fillMaxWidth().background(if (earned) AshPalette.panelRaised else AshPalette.panel)
-                    .border(1.dp, if (earned) AshPalette.flame else AshPalette.edge).padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
-            ) {
-                PixelArtImage(remember(entry.id, earned) { chronicleTrophyArt(entry.id, earned) },
-                    Modifier.size(48.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Label(stringResource(title), if (earned) AshPalette.flameLight else AshPalette.muted, 8)
-                    Body(stringResource(hint), if (earned) AshPalette.bone else AshPalette.muted)
-                    if (earned) {
-                        chronicleLore(entry.id)?.let { Body(stringResource(it), AshPalette.teal) }
-                        AshButton(
-                            label = stringResource(if (entry.id in featuredTrophies(state))
-                                Res.string.chron_unpin else Res.string.chron_pin),
-                            enabled = true, modifier = Modifier.fillMaxWidth(),
-                            onClick = { RebootGraph.engine.featureTrophy(entry.id) },
-                        )
-                    }
-                }
+    }
+}
+
+@Composable
+private fun ChronicleEntryCard(state: RebootState, entry: ChronicleEntry) {
+    val earned = entry.id in state.chronicleEntries
+    val (title, hint) = chronicleText(entry.id)
+    Row(
+        modifier = Modifier.fillMaxWidth().background(if (earned) AshPalette.panelRaised else AshPalette.panel)
+            .border(1.dp, if (earned) AshPalette.flame else AshPalette.edge).padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        PixelArtImage(remember(entry.id, earned) { chronicleTrophyArt(entry.id, earned) },
+            Modifier.size(48.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Label(stringResource(title), if (earned) AshPalette.flameLight else AshPalette.muted, 8)
+            Body(stringResource(hint), if (earned) AshPalette.bone else AshPalette.muted)
+            if (earned) {
+                chronicleLore(entry.id)?.let { Body(stringResource(it), AshPalette.teal) }
+                AshButton(
+                    label = stringResource(if (entry.id in featuredTrophies(state))
+                        Res.string.chron_unpin else Res.string.chron_pin),
+                    enabled = true, modifier = Modifier.fillMaxWidth(),
+                    onClick = { RebootGraph.engine.featureTrophy(entry.id) },
+                )
             }
         }
     }

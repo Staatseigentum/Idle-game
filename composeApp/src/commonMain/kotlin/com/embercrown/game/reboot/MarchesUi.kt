@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +41,79 @@ import org.jetbrains.compose.resources.stringResource
 internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
     var role by remember { mutableStateOf("warden") }
     var daring by remember { mutableStateOf(false) }
+    LazyColumn(
+        modifier = modifier.background(AshPalette.night),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp),
+    ) {
+        item(key = "title") { Label(stringResource(Res.string.march_title), AshPalette.flameLight, 11) }
+        item(key = "intro") { Body(stringResource(Res.string.march_intro), AshPalette.ash) }
+        item(key = "map") {
+            BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // The art is 160x112 pixels. Keep that ratio on every screen.
+                val mapWidth = maxWidth.coerceAtMost(760.dp)
+                Box(Modifier.width(mapWidth).height(mapWidth * 0.7f).clipToBounds()
+                    .border(1.dp, AshPalette.edge).background(AshPalette.void)) {
+                    Crossfade(targetState = Triple(state.conqueredRegions, state.outpostLevels,
+                        cosmeticStyle(state, "map")), animationSpec = tween(650)) { (liberated, outposts, look) ->
+                        PixelArtImage(remember(liberated, outposts, look) { lostMarchesArt(liberated, outposts, look) },
+                            Modifier.fillMaxSize(), fit = PixelFit.Contain)
+                    }
+                    MarchesMotionLayer(state.expedition)
+                }
+            }
+        }
+        item(key = "patrol") { PatrolPanel(state) }
+        state.expedition?.let { active ->
+            item(key = "active-expedition") {
+                Body(stringResource(Res.string.march_active, stringResource(marchTitle(active.regionId)),
+                    active.remainingSeconds), AshPalette.teal)
+            }
+        }
+        state.lastExpeditionRegion?.let { id ->
+            item(key = "last-expedition") {
+                Body(stringResource(Res.string.march_result, state.lastExpeditionReward,
+                    stringResource(marchTitle(id))), AshPalette.flameLight)
+            }
+        }
+        item(key = "event") { MarchEventPanel(state) }
+        item(key = "role-label") { Rule(); Label(stringResource(Res.string.march_role), AshPalette.teal, 8) }
+        item(key = "role-picker") {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                listOf("scout", "warden", "occultist").forEach { option ->
+                    val title = when (option) {
+                        "scout" -> Res.string.march_scout
+                        "warden" -> Res.string.march_warden
+                        else -> Res.string.march_occultist
+                    }
+                    AshButton(stringResource(title), true,
+                        color = if (role == option) AshPalette.teal else AshPalette.panelRaised,
+                        modifier = Modifier.weight(1f), onClick = { role = option })
+                }
+            }
+        }
+        item(key = "approach-label") { Label(stringResource(Res.string.march_approach), AshPalette.teal, 8) }
+        item(key = "approach-picker") {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                AshButton(stringResource(Res.string.march_safe), true,
+                    color = if (!daring) AshPalette.teal else AshPalette.panelRaised,
+                    modifier = Modifier.weight(1f), onClick = { daring = false })
+                AshButton(stringResource(Res.string.march_daring), true,
+                    color = if (daring) AshPalette.crimson else AshPalette.panelRaised,
+                    modifier = Modifier.weight(1f), onClick = { daring = true })
+            }
+        }
+        item(key = "approach-desc") { Body(stringResource(if (daring) Res.string.march_daring_desc else Res.string.march_safe_desc)) }
+        items(LostMarches.all, key = { it.id }) { region -> MarchRegionCard(state, region, role, daring) }
+        item(key = "siege") { Rule(); EclipseSiegePanel(state) }
+        item(key = "court") { Rule(); BlackCourtPanel(state) }
+        item(key = "footer") { Spacer(Modifier.height(14.dp)) }
+    }
+}
+
+/** The map animates independently so region cards and expedition controls stay idle between ticks. */
+@Composable
+private fun MarchesMotionLayer(expedition: MarchExpedition?) {
     var frame by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -47,67 +121,8 @@ internal fun MarchesPanel(state: RebootState, modifier: Modifier = Modifier) {
             frame = (frame + 1) % 240
         }
     }
-    Column(
-        modifier = modifier.background(AshPalette.night).verticalScroll(rememberScrollState()).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(13.dp),
-    ) {
-        Label(stringResource(Res.string.march_title), AshPalette.flameLight, 11)
-        Body(stringResource(Res.string.march_intro), AshPalette.ash)
-        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            // The art is 160x112 pixels. Keep that ratio on every screen so all four regions stay visible.
-            val mapWidth = maxWidth.coerceAtMost(760.dp)
-            Box(Modifier.width(mapWidth).height(mapWidth * 0.7f).clipToBounds()
-                .border(1.dp, AshPalette.edge).background(AshPalette.void)) {
-                Crossfade(targetState = Triple(state.conqueredRegions, state.outpostLevels,
-                    cosmeticStyle(state, "map")), animationSpec = tween(650)) { (liberated, outposts, look) ->
-                    PixelArtImage(remember(liberated, outposts, look) { lostMarchesArt(liberated, outposts, look) },
-                        Modifier.fillMaxSize(), fit = PixelFit.Contain)
-                }
-                PixelArtImage(remember(frame, state.expedition?.regionId) { lostMarchesMotionArt(frame, state.expedition) },
-                    Modifier.fillMaxSize(), fit = PixelFit.Contain)
-            }
-        }
-        PatrolPanel(state)
-        state.expedition?.let { active ->
-            Body(stringResource(Res.string.march_active, stringResource(marchTitle(active.regionId)),
-                active.remainingSeconds), AshPalette.teal)
-        }
-        state.lastExpeditionRegion?.let { id ->
-            Body(stringResource(Res.string.march_result, state.lastExpeditionReward,
-                stringResource(marchTitle(id))), AshPalette.flameLight)
-        }
-        MarchEventPanel(state)
-        Rule()
-        Label(stringResource(Res.string.march_role), AshPalette.teal, 8)
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            listOf("scout", "warden", "occultist").forEach { option ->
-                val title = when (option) {
-                    "scout" -> Res.string.march_scout
-                    "warden" -> Res.string.march_warden
-                    else -> Res.string.march_occultist
-                }
-                AshButton(stringResource(title), true,
-                    color = if (role == option) AshPalette.teal else AshPalette.panelRaised,
-                    modifier = Modifier.weight(1f), onClick = { role = option })
-            }
-        }
-        Label(stringResource(Res.string.march_approach), AshPalette.teal, 8)
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            AshButton(stringResource(Res.string.march_safe), true,
-                color = if (!daring) AshPalette.teal else AshPalette.panelRaised,
-                modifier = Modifier.weight(1f), onClick = { daring = false })
-            AshButton(stringResource(Res.string.march_daring), true,
-                color = if (daring) AshPalette.crimson else AshPalette.panelRaised,
-                modifier = Modifier.weight(1f), onClick = { daring = true })
-        }
-        Body(stringResource(if (daring) Res.string.march_daring_desc else Res.string.march_safe_desc))
-        LostMarches.all.forEach { region -> MarchRegionCard(state, region, role, daring) }
-        Rule()
-        EclipseSiegePanel(state)
-        Rule()
-        BlackCourtPanel(state)
-        Spacer(Modifier.height(14.dp))
-    }
+    val motion = remember(frame, expedition?.regionId) { lostMarchesMotionArt(frame, expedition) }
+    PixelArtImage(motion, Modifier.fillMaxSize(), fit = PixelFit.Contain)
 }
 
 @Composable

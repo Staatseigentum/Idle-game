@@ -40,14 +40,6 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun PrestigeScreen(state: RebootState, onContinue: () -> Unit) {
     val scene = remember { ashKingdomArt(emptyMap(), 8, false, skyLook = "dawn") }
-    var frame by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(125)
-            frame = (frame + 1) % 96
-        }
-    }
-    val motion = remember(frame) { ashKingdomMotionArt(emptyMap(), 8, false, frame, skyLook = "dawn") }
     Column(Modifier.fillMaxSize().background(AshPalette.void)) {
         Column(Modifier.fillMaxWidth().background(AshPalette.night)
             .border(1.dp, AshPalette.edge).padding(horizontal = 18.dp, vertical = 14.dp),
@@ -60,7 +52,7 @@ internal fun PrestigeScreen(state: RebootState, onContinue: () -> Unit) {
                 Row(Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(Modifier.weight(0.95f).fillMaxHeight().verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        PrestigeScene(scene, motion, Modifier.fillMaxWidth().height(290.dp))
+                        PrestigeScene(scene, Modifier.fillMaxWidth().height(290.dp))
                         PrestigeSummary(state)
                         RelicSetPanel(state)
                     }
@@ -73,7 +65,7 @@ internal fun PrestigeScreen(state: RebootState, onContinue: () -> Unit) {
             } else {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PrestigeScene(scene, motion, Modifier.fillMaxWidth().height(205.dp))
+                    PrestigeScene(scene, Modifier.fillMaxWidth().height(205.dp))
                     PrestigeSummary(state)
                     RelicForgePanel(state)
                     RelicSetPanel(state)
@@ -95,7 +87,15 @@ internal fun PrestigeScreen(state: RebootState, onContinue: () -> Unit) {
 
 @Composable
 private fun PrestigeScene(scene: com.embercrown.game.ui.pixelart.PixelArt,
-                          motion: com.embercrown.game.ui.pixelart.PixelArt, modifier: Modifier = Modifier) {
+                          modifier: Modifier = Modifier) {
+    var frame by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(125)
+            frame = (frame + 1) % 96
+        }
+    }
+    val motion = remember(frame) { ashKingdomMotionArt(emptyMap(), 8, false, frame, skyLook = "dawn") }
     Box(modifier.clipToBounds().background(AshPalette.night).border(2.dp, AshPalette.flame)) {
         PixelArtImage(scene, Modifier.fillMaxSize(), PixelFit.Cover)
         PixelArtImage(motion, Modifier.fillMaxSize(), PixelFit.Cover)

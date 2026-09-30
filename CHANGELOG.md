@@ -1,5 +1,15 @@
 # Embercrown changelog
 
+## 0.5.1 — A Smoother Kingdom
+
+Your kingdom should feel more responsive on Android, especially when browsing a growing realm.
+
+- The Buildings, Lost Marches and Chronicle screens now draw only the entries you can see. Long lists scroll more smoothly as your kingdom expands.
+- Animated building portraits no longer make their entire cards recalculate prices every frame.
+- Kingdom, Marches and Prestige animations now update independently from the surrounding buttons and information panels.
+
+**Your save is safe:** This update does not reset your progress.
+
 ## 0.5.0 — The Black Court
 
 The roads beyond the firelight are open. This update adds new ways to grow your first reign and a longer endgame after the Eclipse Siege.

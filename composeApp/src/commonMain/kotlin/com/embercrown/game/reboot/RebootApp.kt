@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -32,6 +33,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -400,13 +403,20 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                     }
                 }
                 Page.MARCHES -> MarchesPanel(state, modifier = Modifier.fillMaxSize())
-                Page.BUILDINGS -> Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+                Page.BUILDINGS -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Label(stringResource(Res.string.reboot_buildings), AshPalette.bone, 10)
-                    BuildModeSelector(buildMode, onBuildMode, guided = state.tutorialStep in 2..4)
-                    RebootBuildings.all.forEach { StructureCard(state, it, buildMode, compact = true) }
+                    item(key = "title") {
+                        Label(stringResource(Res.string.reboot_buildings), AshPalette.bone, 10)
+                    }
+                    item(key = "build-mode") {
+                        BuildModeSelector(buildMode, onBuildMode, guided = state.tutorialStep in 2..4)
+                    }
+                    items(RebootBuildings.all, key = { it.id }) { building ->
+                        StructureCard(state, building, buildMode, compact = true)
+                    }
                 }
                 Page.RITUAL -> Column(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
@@ -424,11 +434,7 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
                     Rule()
                     RitualPanel(state, onRitual)
                 }
-                Page.CHRONICLE -> Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
-                ) {
-                    ChroniclePanel(state)
-                }
+                Page.CHRONICLE -> MobileChroniclePanel(state)
                 Page.SYSTEM -> SystemPanel(onReset)
             }
             }
@@ -543,26 +549,12 @@ private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, high
     val flameLook = cosmeticStyle(state, "flame")
     val bannerLook = cosmeticStyle(state, "banner")
     val skyLook = cosmeticStyle(state, "sky")
-    var frame by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(125)
-            frame = (frame + 1) % 96
-        }
-    }
     val art = remember(state.levels, state.buildingUpgrades, state.conqueredRegions,
         state.specializations, state.districtLevels, state.eclipseSiegeStage, gloomBand,
         state.beaconSeconds > 0, flameLook, bannerLook, skyLook) {
         ashKingdomArt(state.levels, gloomBand * 10, state.beaconSeconds > 0,
             state.buildingUpgrades, state.conqueredRegions, state.specializations,
             state.districtLevels, state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
-    }
-    val motion = remember(state.levels, state.buildingUpgrades, state.specializations,
-        state.districtLevels, state.eclipseSiegeStage, gloomBand, state.beaconSeconds > 0,
-        flameLook, bannerLook, skyLook, frame) {
-        ashKingdomMotionArt(state.levels, gloomBand * 10, state.beaconSeconds > 0, frame,
-            state.buildingUpgrades, state.specializations, state.districtLevels,
-            state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
     }
     var tapCount by remember { mutableIntStateOf(0) }
     var tapPosition by remember { mutableStateOf(Offset.Zero) }
@@ -586,7 +578,7 @@ private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, high
             },
     ) {
         PixelArtImage(art, modifier = Modifier.fillMaxSize(), fit = PixelFit.Cover)
-        PixelArtImage(motion, modifier = Modifier.fillMaxSize(), fit = PixelFit.Cover)
+        KingdomMotionLayer(state, gloomBand, flameLook, bannerLook, skyLook)
         TapSparks(tapCount, tapPosition, modifier = Modifier.fillMaxSize())
         Box(
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
@@ -614,6 +606,27 @@ private fun KingdomScene(state: RebootState, modifier: Modifier = Modifier, high
             Label(stringResource(Res.string.reboot_gather), AshPalette.flameLight, 10)
         }
     }
+}
+
+/** Keep the 8 fps art clock inside its own recomposition scope, away from tap and economy UI. */
+@Composable
+private fun KingdomMotionLayer(state: RebootState, gloomBand: Int, flameLook: String,
+                               bannerLook: String, skyLook: String) {
+    var frame by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(125)
+            frame = (frame + 1) % 96
+        }
+    }
+    val motion = remember(state.levels, state.buildingUpgrades, state.specializations,
+        state.districtLevels, state.eclipseSiegeStage, gloomBand, state.beaconSeconds > 0,
+        flameLook, bannerLook, skyLook, frame) {
+        ashKingdomMotionArt(state.levels, gloomBand * 10, state.beaconSeconds > 0, frame,
+            state.buildingUpgrades, state.specializations, state.districtLevels,
+            state.eclipseSiegeStage == 3, flameLook, bannerLook, skyLook)
+    }
+    PixelArtImage(motion, modifier = Modifier.fillMaxSize(), fit = PixelFit.Cover)
 }
 
 @Composable
@@ -771,13 +784,6 @@ private fun StructureCard(state: RebootState, building: RebootBuilding, mode: Bu
     val mastery = state.mastery(building.id)
     val tutorialTarget = building.id == "coalpit" && state.tutorialStep in 2..4
     val tutorialMastery = building.id == "coalpit" && state.tutorialStep == 4
-    var iconFrame by remember(building.id) { mutableIntStateOf(0) }
-    LaunchedEffect(building.id, unlocked) {
-        if (unlocked) while (true) {
-            delay(250)
-            iconFrame = (iconFrame + 1) % 16
-        }
-    }
     val purchaseFlash = remember(building.id) { Animatable(0f) }
     var previousLevel by remember(building.id) { mutableIntStateOf(level) }
     LaunchedEffect(level) {
@@ -803,10 +809,7 @@ private fun StructureCard(state: RebootState, building: RebootBuilding, mode: Bu
         Box(Modifier.size(if (compact) 50.dp else 60.dp).background(AshPalette.void)
             .border(1.dp, if (unlocked) AshPalette.edge else AshPalette.panelRaised),
             contentAlignment = Alignment.Center) {
-            PixelArtImage(
-                art = remember(building.id, iconFrame) { ashBuildingIcon(building.id, iconFrame) },
-                modifier = Modifier.fillMaxSize().padding(3.dp),
-            )
+            AnimatedBuildingIcon(building.id, unlocked)
         }
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -868,6 +871,20 @@ private fun StructureCard(state: RebootState, building: RebootBuilding, mode: Bu
         Label(stringResource(Res.string.reboot_mastered), AshPalette.teal, 7)
       }
     }
+}
+
+/** Each visible icon ticks independently; price calculations in its card do not run per frame. */
+@Composable
+private fun AnimatedBuildingIcon(id: String, unlocked: Boolean) {
+    var frame by remember(id) { mutableIntStateOf(0) }
+    LaunchedEffect(id, unlocked) {
+        if (unlocked) while (true) {
+            delay(250)
+            frame = (frame + 1) % 16
+        }
+    }
+    val art = remember(id, frame) { ashBuildingIcon(id, frame) }
+    PixelArtImage(art, modifier = Modifier.fillMaxSize().padding(3.dp))
 }
 
 @Composable
