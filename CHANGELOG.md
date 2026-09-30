@@ -1,5 +1,14 @@
 # Embercrown changelog
 
+## 0.5.2 — When Darkness Closes In
+
+The Gloom no longer stays behind the kingdom walls.
+
+- As Gloom rises, creeping shadows, crimson fractures, occult runes and drifting ash spread across the screen. At its peak, the border itself pulses. The kingdom artwork and warnings change with it on desktop and Android.
+- On Android, Embercrown now checks for a new version at launch, downloads and verifies the APK, then opens the system installer automatically. Android may still ask you to allow installs from Embercrown and confirm the update.
+
+**Your save is safe:** No progress reset is required.
+
 ## 0.5.1 — A Smoother Kingdom
 
 Your kingdom should feel more responsive on Android, especially when browsing a growing realm.

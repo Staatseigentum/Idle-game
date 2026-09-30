@@ -1,7 +1,7 @@
 package com.embercrown.game.update
 
 /**
- * Installs [update] immediately, with no user interaction on our side. A no-op wherever
+ * Starts installing [update] immediately, subject to Android's required system approval. A no-op wherever
  * "immediately" isn't possible or meaningful: desktop already runs the latest build by the time
  * this executes, because the launcher downloads and swaps in a newer jar *before* the game
  * process even starts (see the `:launcher` module), and iOS cannot self-update at all.

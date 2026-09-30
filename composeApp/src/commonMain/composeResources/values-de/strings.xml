@@ -6,6 +6,10 @@
     <string name="reboot_per_second">+%1$s / SEK.</string>
     <string name="reboot_relics">RELIKTE</string>
     <string name="reboot_gloom">FINSTERNIS</string>
+    <string name="reboot_gloom_veil">DER SCHLEIER REGT SICH</string>
+    <string name="reboot_gloom_shadows">SCHATTEN ERREICHEN DIE MAUERN</string>
+    <string name="reboot_gloom_crown">DIE KRONE VERBLASST</string>
+    <string name="reboot_gloom_last_light">DAS LETZTE LICHT FLACKERT</string>
     <string name="reboot_gather">GLUT SCHÜREN</string>
     <string name="reboot_gather_hint">Berühre das Königreich und entfache die Glut.</string>
     <string name="reboot_buildings">DEIN KÖNIGREICH</string>

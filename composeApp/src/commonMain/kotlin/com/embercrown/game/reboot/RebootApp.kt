@@ -138,6 +138,9 @@ fun RebootApp() {
                         onReset = { confirmReset = true })
                 }
             }
+            if (!state.prestigePending && !ritualRunning && state.tutorialStep != 0) {
+                GloomAtmosphere(state.gloom)
+            }
             if (confirmRitual) RitualConfirmation(
                 reward = ritualReward(state),
                 onCancel = { confirmRitual = false },
@@ -474,9 +477,12 @@ private fun MobileKingdom(state: RebootState, buildMode: BuildMode, onBuildMode:
 
 @Composable
 private fun KingdomHeader(state: RebootState, compact: Boolean, onOmen: () -> Unit) {
+    val visual = gloomVisuals(state.gloom)
     Column(
-        modifier = Modifier.fillMaxWidth().background(AshPalette.night)
-            .border(width = 1.dp, color = AshPalette.edge.copy(alpha = 0.55f))
+        modifier = Modifier.fillMaxWidth()
+            .background(lerp(AshPalette.night, Color(0xFF301B28), visual.pressure * 0.65f))
+            .border(width = 1.dp, color = lerp(AshPalette.edge.copy(alpha = 0.55f),
+                AshPalette.crimson, visual.pressure))
             .padding(horizontal = if (compact) 13.dp else 20.dp, vertical = if (compact) 11.dp else 15.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -504,11 +510,23 @@ private fun KingdomHeader(state: RebootState, compact: Boolean, onOmen: () -> Un
         }
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Label(stringResource(Res.string.reboot_gloom), AshPalette.crimson, 7)
+            Label(stringResource(Res.string.reboot_gloom),
+                lerp(AshPalette.crimson, AshPalette.flameLight, visual.pressure), 7)
             Spacer(Modifier.width(10.dp))
             GloomBar(state.gloom, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            Label("${state.gloom.toInt()}%", AshPalette.ash, 7)
+            Label("${state.gloom.toInt()}%",
+                lerp(AshPalette.ash, AshPalette.flameLight, visual.pressure), 7)
+        }
+        if (visual.stage >= 2) {
+            Spacer(Modifier.height(6.dp))
+            val warning = when (visual.stage) {
+                2 -> Res.string.reboot_gloom_veil
+                3 -> Res.string.reboot_gloom_shadows
+                4 -> Res.string.reboot_gloom_crown
+                else -> Res.string.reboot_gloom_last_light
+            }
+            Label(stringResource(warning), AshPalette.flameLight, 7)
         }
         Spacer(Modifier.height(9.dp))
         BeaconQuickAction(state, compact)
@@ -533,11 +551,13 @@ private fun ResourceBlock(label: String, value: String, color: Color,
 @Composable
 private fun GloomBar(gloom: Double, modifier: Modifier = Modifier) {
     val smooth by animateFloatAsState(gloom.toFloat(), animationSpec = tween(850))
+    val pressure = gloomVisuals(gloom).pressure
+    val filledColor = lerp(AshPalette.crimson, Color(0xFFFF644D), pressure)
     Row(modifier = modifier.height(9.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         repeat(20) { index ->
             val fill = (smooth / 5f - index).coerceIn(0f, 1f)
             Box(
-                modifier = Modifier.weight(1f).fillMaxHeight().background(lerp(AshPalette.panelRaised, AshPalette.crimson, fill)),
+                modifier = Modifier.weight(1f).fillMaxHeight().background(lerp(AshPalette.panelRaised, filledColor, fill)),
             )
         }
     }

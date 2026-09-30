@@ -6,6 +6,10 @@
     <string name="reboot_per_second">+%1$s / SEC.</string>
     <string name="reboot_relics">RELICS</string>
     <string name="reboot_gloom">GLOOM</string>
+    <string name="reboot_gloom_veil">THE VEIL STIRS</string>
+    <string name="reboot_gloom_shadows">SHADOWS CROSS THE WALLS</string>
+    <string name="reboot_gloom_crown">THE CROWN FADES</string>
+    <string name="reboot_gloom_last_light">THE LAST LIGHT FLICKERS</string>
     <string name="reboot_gather">STOKE THE EMBERS</string>
     <string name="reboot_gather_hint">Touch the kingdom and kindle the embers.</string>
     <string name="reboot_buildings">YOUR KINGDOM</string>

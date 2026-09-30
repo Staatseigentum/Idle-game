@@ -19,7 +19,7 @@ import java.util.prefs.Preferences
 fun main(args: Array<String>) {
     val profile = args.firstOrNull() ?: error("Pass one isolated profile name")
     val mode = args.getOrNull(1) ?: "showcase"
-    require(args.size in 1..2 && mode in setOf("showcase", "fresh", "all-achievements", "pre-ritual"))
+    require(args.size in 1..2 && mode in setOf("showcase", "fresh", "all-achievements", "pre-ritual", "gloom"))
     require(Regex("[A-Za-z0-9_-]{1,48}").matches(profile))
     val profileNode = Preferences.userRoot().node("com/embercrown/game/profiles/$profile")
     if (mode == "all-achievements") {
@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
             "Refusing to overwrite an existing achievement preview profile"
         }
     }
-    val state = if (mode == "pre-ritual") RebootState(
+    val baseState = if (mode == "pre-ritual") RebootState(
         embers = 2_400_000_000_000.0,
         lifetimeEmbers = 3_200_000_000_000.0,
         levels = RebootBuildings.all.associate { building -> building.id to when (building.id) {
@@ -122,6 +122,7 @@ fun main(args: Array<String>) {
         playedSeconds = 1_800.0,
         lastPlayedEpochSeconds = nowEpochSeconds(),
     )
+    val state = if (mode == "gloom") baseState.copy(gloom = 95.0) else baseState
     profileNode.put("embercrown_ash_kingdom_v1", Json.encodeToString(state))
     profileNode.put("embercrown_language_v1", if (mode == "pre-ritual") "de" else "en")
     profileNode.flush()

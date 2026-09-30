@@ -2,6 +2,8 @@ package com.embercrown.game.update
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.embercrown.game.game.appContext
 import kotlinx.coroutines.Dispatchers
@@ -12,27 +14,59 @@ import java.net.URL
 import java.security.MessageDigest
 
 /**
- * Downloads the release APK and fires Android's own package installer on it, with no dialog of
- * our own in between. Android still shows its own "Install/Update this app?" system prompt for a
- * sideloaded APK — no app can suppress that without root/device-owner privileges — but nothing
- * on our side asks first.
+ * Downloads and verifies the release APK in the background, then opens Android's installer.
+ * Android may first require a one-time "install unknown apps" grant for Embercrown and will
+ * present its own installation confirmation. The game never bypasses those system protections.
  */
 actual suspend fun applyUpdateAutomatically(update: AvailableUpdate) {
     val asset = update.assets.firstOrNull {
         it.name.contains("android", ignoreCase = true) && it.name.endsWith(".apk", ignoreCase = true)
     } ?: return
 
-    withContext(Dispatchers.IO) {
+    val apk = withContext(Dispatchers.IO) {
         val target = File(appContext.cacheDir, "update-${update.version}.apk")
         runCatching {
             downloadTo(asset.downloadUrl, target)
             verifyApk(target, asset)
-            installApk(target)
+            target
         }.onFailure {
             target.delete()
             println("[updater] Android update failed: ${it.message}")
-        }
+        }.getOrNull()
     }
+    if (apk != null) runCatching { installOrRequestPermission(apk) }.onFailure {
+        apk.delete()
+        println("[updater] Android installer failed: ${it.message}")
+    }
+}
+
+private var pendingApk: File? = null
+
+/** After returning from the system's per-app source-permission screen, continue automatically. */
+fun resumePendingUpdateInstall() {
+    val apk = pendingApk ?: return
+    if (!apk.isFile) {
+        pendingApk = null
+        return
+    }
+    if (Build.VERSION.SDK_INT >= 26 && !appContext.packageManager.canRequestPackageInstalls()) return
+    pendingApk = null
+    runCatching { installApk(apk) }.onFailure {
+        apk.delete()
+        println("[updater] Android installer failed: ${it.message}")
+    }
+}
+
+private fun installOrRequestPermission(apk: File) {
+    if (Build.VERSION.SDK_INT >= 26 && !appContext.packageManager.canRequestPackageInstalls()) {
+        pendingApk = apk
+        val settings = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${appContext.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        appContext.startActivity(settings)
+        return
+    }
+    installApk(apk)
 }
 
 private fun installApk(apk: File) {

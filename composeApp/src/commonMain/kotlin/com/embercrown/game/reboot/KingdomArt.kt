@@ -335,6 +335,22 @@ fun ashKingdomArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean,
             g.set(x, y, 'p')
         }
     }
+    if (gloom >= 20) repeat((gloom - 15) / 5) { i ->
+        val x = if (i % 2 == 0) (i * 17) % 46 else 119 + (i * 11) % 41
+        val y = 7 + (i * 19) % 45
+        g.rect(x, y, x + 3 + i % 4, y + 1, 'p')
+    }
+    if (gloom >= 45) g.ring(121, 28, 17 + (gloom - 45) / 15, 16, 'p')
+    if (gloom >= 70) repeat((gloom - 60) / 4) { i ->
+        val x = if (i % 2 == 0) 2 + i * 3 else 156 - i * 3
+        val y = 40 + i * 7 % 37
+        g.line(x, y, x + if (i % 2 == 0) 6 else -6, y + 5, 'p')
+    }
+    if (gloom >= 85) repeat((gloom - 75) / 3) { i ->
+        val x = 5 + i * 23 % 150
+        val y = 99 + i * 11 % 17
+        g.line(x, y, x + 4, y - 2, 'R')
+    }
     return g.build(kingdomCosmeticColors(flameLook, bannerLook, skyLook))
 }
 
@@ -495,6 +511,11 @@ fun ashKingdomMotionArt(levels: Map<String, Int>, gloom: Int, beaconLit: Boolean
         val x = (i * 31 + frame * 3) % 160
         val y = (i * 17 + frame * 2) % 90
         g.line(x, y, x - 1, y + 3, 'v')
+    }
+    if (gloom >= 75) repeat((gloom - 65) / 3) { i ->
+        val x = (i * 29 + frame * 2) % 160
+        val y = 98 + (i * 13 + frame) % 18
+        g.set(x, y, if (i % 3 == 0) 'R' else 'p')
     }
     // Mist crosses in front of the earth but leaves the buildings legible.
     repeat(7) { i ->
